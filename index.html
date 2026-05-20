@@ -1,300 +1,701 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cumplimiento de Planeaciones - COBAED 2026B</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0f1117; --surface:#1a1f2e; --surface2:#242938;
+    --border:#2e3450; --accent:#3b82f6; --accent2:#10b981;
+    --danger:#ef4444; --warn:#f59e0b; --text:#e2e8f0; --muted:#64748b;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:"IBM Plex Sans",sans-serif; min-height:100vh; }
+  .mono { font-family:"IBM Plex Mono",monospace; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; }
+  .card2 { background:var(--surface2); border:1px solid var(--border); border-radius:8px; }
+  .kpi-val { font-size:2.2rem; font-weight:700; line-height:1; }
+  .kpi-label { font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-top:4px; }
+  .bar-wrap { height:6px; background:var(--border); border-radius:3px; overflow:hidden; margin-top:4px; }
+  .bar-fill { height:100%; border-radius:3px; }
+  .tbl { width:100%; border-collapse:collapse; font-size:0.78rem; }
+  .tbl th { background:var(--surface2); color:var(--muted); font-size:0.65rem; letter-spacing:0.08em; text-transform:uppercase; padding:8px 10px; text-align:left; position:sticky; top:0; z-index:1; }
+  .tbl td { padding:7px 10px; border-bottom:1px solid var(--border); }
+  .tbl tr:hover td { background:rgba(59,130,246,0.06); }
+  .tbl-wrap { max-height:480px; overflow-y:auto; border-radius:8px; border:1px solid var(--border); }
+  .tbl-wrap::-webkit-scrollbar { width:5px; }
+  .tbl-wrap::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+  .badge { display:inline-block; font-size:0.65rem; font-weight:600; padding:2px 7px; border-radius:20px; }
+  select,input[type=text] { background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:0.78rem; font-family:inherit; outline:none; width:100%; }
+  select:focus,input:focus { border-color:var(--accent); }
+  .tab-btn { padding:8px 18px; border-radius:6px; font-size:0.78rem; font-weight:600; cursor:pointer; border:none; background:transparent; color:var(--muted); transition:all 0.2s; }
+  .tab-btn.active { background:var(--accent); color:#fff; }
+  .hidden { display:none !important; }
+  .pct-100 { color:#10b981; }
+  .pct-high { color:#3b82f6; }
+  .pct-mid  { color:#f59e0b; }
+  .pct-low  { color:#ef4444; }
+  .pct-zero { color:#6b7280; }
+  ::-webkit-scrollbar { width:6px; height:6px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
 
-    <script>
-    (function() {
-        document.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
-            return false;
-        });
-      
-       document.addEventListener('keydown', function(e) {
-            const key = e.key.toLowerCase();
-            if ((e.ctrlKey && (key === 'u' || key === 's' || key === 'c' || key === 'i' || key === 'j')) ||
-                (e.ctrlKey && e.shiftKey && (key === 'i' || key === 'j' || key === 'c')) ||
-                e.key === 'F12') {
-                e.preventDefault();
-                return false;
-            }
-        });
-        
-        let devtoolsTriggered = false;
-        setInterval(function() {
-            if (devtoolsTriggered) return;
-            const before = new Date();
-            debugger; 
-            const after = new Date();
-            if (after - before > 100) { 
-                devtoolsTriggered = true;
-                document.body.innerHTML = '<div style="text-align:center; padding:50px; font-family:sans-serif;"><h1 style="color:#042C53;">⚠️ Acceso no autorizado</h1><p>El uso de herramientas de desarrollo no está permitido en este recurso institucional.</p><p style="font-size:14px; margin-top:30px;">🔒 COBAED · Dirección Académica</p></div>';
-            }
-        }, 2000);
-        
-        const style = document.createElement('style');
-        style.textContent = `body { user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; }`;
-        document.head.appendChild(style);
-    })();
-    </script>
+  /* Upload zone */
+  #upload-zone {
+    border:2px dashed var(--border); border-radius:16px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:60px 40px; gap:16px; cursor:pointer; transition:all 0.2s;
+  }
+  #upload-zone:hover, #upload-zone.drag { border-color:var(--accent); background:rgba(59,130,246,0.05); }
+  #upload-zone svg { opacity:0.4; }
 
-
-    
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Académico - Reporte Final</title>
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); }
-        body { background-color: #f1f5f9; font-family: 'Inter', sans-serif; }
-        .table-container { max-height: 400px; overflow-y: auto; scrollbar-width: thin; }
-        select { border: 1px solid #cbd5e1 !important; appearance: none; background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; padding-right: 2.5rem; }
-    </style>
+  /* Toast */
+  #toast { position:fixed; bottom:24px; right:24px; background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:12px 18px; font-size:0.8rem; z-index:999;
+    transform:translateY(80px); opacity:0; transition:all 0.3s; pointer-events:none; }
+  #toast.show { transform:translateY(0); opacity:1; }
+  
+  /* Loading spinner */
+  .spinner { display:inline-block; width:20px; height:20px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.6s linear infinite; margin-right:8px; vertical-align:middle; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .loading-text { display:inline-flex; align-items:center; gap:6px; }
+  
+  /* Loading overlay */
+  #loading-overlay {
+    position:fixed; top:0; left:0; right:0; bottom:0;
+    background:rgba(15,17,23,0.95); z-index:1000;
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:20px;
+    transition:opacity 0.3s;
+  }
+  #loading-overlay.hidden { display:none; }
+  .loading-spinner-large { width:48px; height:48px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; }
+</style>
 </head>
 <body class="p-4 md:p-6">
 
-    <div class="max-w-[1600px] mx-auto mb-6">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-6 rounded-2xl shadow-lg text-white">
-            <div>
-                <h1 class="text-2xl font-bold tracking-tight flex items-center gap-2">
-                    <i class="fas fa-chart-pie text-emerald-400"></i> Análisis de Cumplimiento Académico
-                </h1>
-                <p class="text-slate-400 text-sm italic">Información Actualizada al 1er parcial de semestre 2026B </p>
-                <div class="mt-1 inline-flex items-center gap-2 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Registros cargados:</span>
-                    <span id="total-raw" class="text-xs font-black text-emerald-400">0</span>
-                </div>
-            </div>
-            <div class="flex flex-wrap items-center gap-3">
-                <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-500 px-5 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 shadow-md">
-                    <i class="fas fa-file-excel"></i> Exportar Excel
-                </button>
-                <button onclick="clearData()" class="text-slate-400 hover:text-red-500 transition-colors px-2" title="Limpiar caché local"><i class="fas fa-trash-alt"></i></button>
-            </div>
-        </div>
+<!-- Loading overlay -->
+<div id="loading-overlay">
+  <div class="loading-spinner-large"></div>
+  <div class="text-slate-400">Cargando datos desde Google Drive...</div>
+  <div class="text-xs text-slate-600">Esto puede tomar unos segundos</div>
+</div>
+
+<!-- Header -->
+<div class="card p-5 mb-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+  <div>
+    <div class="text-xs text-blue-400 mono font-semibold uppercase tracking-widest mb-1">COBAED &mdash; Planeaciones Did&aacute;cticas 2026B</div>
+    <h1 class="text-xl font-bold text-white">Dashboard de Cumplimiento</h1>
+    <p class="text-sm text-slate-400 mt-1">Seguimiento por docente, materia y parcial</p>
+  </div>
+  <div class="flex gap-2 flex-wrap items-center">
+    <input type="file" id="jsonInput" accept=".json" class="hidden" onchange="cargarArchivoManual(this)">
+    <button onclick="document.getElementById('jsonInput').click()"
+      class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition">
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 12V4m0 0l-4 4m4-4l4 4"/></svg>
+      Cargar archivo JSON (alternativo)
+    </button>
+    <button id="btn-export" onclick="exportarCSV()" class="hidden flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition">
+      &#8595; Exportar CSV
+    </button>
+    <div id="badge-archivo" class="hidden text-xs mono text-slate-400 bg-slate-800 px-3 py-2 rounded-lg border border-slate-700"></div>
+  </div>
+</div>
+
+<!-- Upload screen (shown before data is loaded) -->
+<div id="upload-screen">
+  <div id="upload-zone">
+    <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" fill="none" viewBox="0 0 24 24" stroke="#64748b" stroke-width="1.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V7a2 2 0 012-2h5l2 2h5a2 2 0 012 2v10a2 2 0 01-2 2z"/>
+    </svg>
+    <div class="text-center">
+      <div class="text-white font-semibold text-lg">Esperando carga de datos</div>
+      <div class="text-slate-400 text-sm mt-1">Cargando automáticamente desde Google Drive...</div>
+      <div class="text-slate-600 text-xs mt-3 mono">Si la carga automática falla, usa el botón "Cargar archivo JSON"</div>
     </div>
+  </div>
+</div>
 
-    <div class="max-w-[1600px] mx-auto mb-6 glass-card p-5 rounded-xl shadow-sm">
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-            <div class="flex flex-col gap-1"><label class="text-[10px] font-black text-slate-500 uppercase">Plantel</label><select id="f-plantel" class="p-2 rounded-lg bg-white text-xs" onchange="applyFilters()"><option value="">Todos</option></select></div>
-            <div class="flex flex-col gap-1"><label class="text-[10px] font-black text-slate-500 uppercase">Docente</label><select id="f-docente" class="p-2 rounded-lg bg-white text-xs" onchange="applyFilters()"><option value="">Todos</option></select></div>
-            <div class="flex flex-col gap-1"><label class="text-[10px] font-black text-slate-500 uppercase">Estatus</label><select id="f-estatus" class="p-2 rounded-lg bg-white text-xs" onchange="applyFilters()"><option value="">Todos</option></select></div>
-            <div class="flex flex-col gap-1"><label class="text-[10px] font-black text-slate-500 uppercase">Materia</label><select id="f-materia" class="p-2 rounded-lg bg-white text-xs" onchange="applyFilters()"><option value="">Todas</option></select></div>
-            <div class="flex flex-col gap-1"><label class="text-[10px] font-black text-slate-500 uppercase">Semestre</label><select id="f-semestre" class="p-2 rounded-lg bg-white text-xs" onchange="applyFilters()"><option value="">Todos</option></select></div>
-            <div class="flex flex-col gap-1"><label class="text-[10px] font-black text-slate-500 uppercase">Turno</label><select id="f-turno" class="p-2 rounded-lg bg-white text-xs" onchange="applyFilters()"><option value="">Todos</option></select></div>
-            <div class="flex flex-col gap-1"><label class="text-[10px] font-black text-slate-500 uppercase">Parcial</label><select id="f-parcial" class="p-2 rounded-lg bg-white text-xs" onchange="applyFilters()"><option value="">Todos</option></select></div>
-            <div class="flex flex-col gap-1"><label class="text-[10px] font-black text-slate-500 uppercase">Fecha</label><select id="f-fecha" class="p-2 rounded-lg bg-white text-xs" onchange="applyFilters()"><option value="">Todas</option></select></div>
-        </div>
+<!-- Dashboard (hidden until data loads) -->
+<div id="dashboard-screen" class="hidden">
+
+<!-- KPIs principales -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+  <div class="card p-5 border-t-2 border-blue-500">
+    <div class="kpi-val text-blue-400 mono" id="kpi-oblig">—</div>
+    <div class="kpi-label">Obligaciones Totales</div>
+  </div>
+  <div class="card p-5 border-t-2 border-emerald-500">
+    <div class="kpi-val text-emerald-400 mono" id="kpi-cumple">—</div>
+    <div class="kpi-label">Cumplidas</div>
+  </div>
+  <div class="card p-5 border-t-2 border-amber-500">
+    <div class="kpi-val text-amber-400 mono" id="kpi-pct">—</div>
+    <div class="kpi-label">% Cumplimiento Global</div>
+  </div>
+  <div class="card p-5 border-t-2 border-red-500">
+    <div class="kpi-val text-red-400 mono" id="kpi-falta">—</div>
+    <div class="kpi-label">Planeaciones Faltantes</div>
+  </div>
+</div>
+
+<!-- KPIs docentes -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+  <div class="card2 p-4 text-center">
+    <div class="text-2xl font-bold mono text-white" id="kpi-docentes">—</div>
+    <div class="kpi-label">Docentes con obligaci&oacute;n</div>
+  </div>
+  <div class="card2 p-4 text-center">
+    <div class="text-2xl font-bold mono text-emerald-400" id="kpi-100">—</div>
+    <div class="kpi-label">Docentes al 100%</div>
+  </div>
+  <div class="card2 p-4 text-center">
+    <div class="text-2xl font-bold mono text-amber-400" id="kpi-parcial">—</div>
+    <div class="kpi-label">Cumplimiento parcial</div>
+  </div>
+  <div class="card2 p-4 text-center">
+    <div class="text-2xl font-bold mono text-red-400" id="kpi-cero">—</div>
+    <div class="kpi-label">Sin entregar</div>
+  </div>
+</div>
+
+<!-- Filtros -->
+<div class="card p-4 mb-5">
+  <div class="text-xs text-slate-400 mono uppercase font-bold mb-3 tracking-widest">Filtros</div>
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+    <div><label class="text-xs text-slate-500 block mb-1">Plantel</label><select id="f-plantel" onchange="aplicarFiltros()"><option value="">Todos</option></select></div>
+    <div><label class="text-xs text-slate-500 block mb-1">Semestre</label><select id="f-semestre" onchange="aplicarFiltros()"><option value="">Todos</option></select></div>
+    <div><label class="text-xs text-slate-500 block mb-1">Turno</label>
+      <select id="f-turno" onchange="aplicarFiltros()">
+        <option value="">Todos</option><option value="Mat">Matutino</option><option value="Vesp">Vespertino</option>
+      </select>
     </div>
-
-    <div class="max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div class="glass-card p-5 rounded-xl border-b-4 border-blue-500 text-center">
-            <p class="text-[10px] font-black text-slate-400 uppercase">Planeaciones Únicas</p>
-            <h3 id="kpi-total" class="text-3xl font-black text-slate-800">0</h3>
-        </div>
-        <div class="glass-card p-5 rounded-xl border-b-4 border-emerald-500 text-center">
-            <p class="text-[10px] font-black text-slate-400 uppercase">% Cumplimiento</p>
-            <h3 id="kpi-cumplimiento" class="text-3xl font-black text-slate-800">0%</h3>
-        </div>
-        <div class="glass-card p-5 rounded-xl border-b-4 border-indigo-500 text-center">
-            <p class="text-[10px] font-black text-slate-400 uppercase">Materias</p>
-            <h3 id="kpi-materias" class="text-3xl font-black text-slate-800">0</h3>
-        </div>
-        <div class="glass-card p-5 rounded-xl border-b-4 border-amber-500 text-center">
-            <p class="text-[10px] font-black text-slate-400 uppercase">Docentes</p>
-            <h3 id="kpi-docentes" class="text-3xl font-black text-slate-800">0</h3>
-        </div>
+    <div><label class="text-xs text-slate-500 block mb-1">Parcial</label>
+      <select id="f-parcial" onchange="aplicarFiltros()">
+        <option value="">Todos</option><option value="1">1er Parcial</option><option value="2">2do Parcial</option><option value="3">3er Parcial</option>
+      </select>
     </div>
-
-    <div class="max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div class="glass-card p-4 rounded-xl shadow-sm">
-            <div id="chart-semestre" style="height: 250px;"></div>
-        </div>
-        <div class="glass-card p-4 rounded-xl shadow-sm">
-            <div id="chart-parcial" style="height: 250px;"></div>
-        </div>
-        <div class="glass-card p-4 rounded-xl shadow-sm">
-            <div id="chart-gauge" style="height: 250px;"></div>
-        </div>
+    <div><label class="text-xs text-slate-500 block mb-1">Buscar docente</label>
+      <input type="text" id="f-docente" placeholder="Nombre..." oninput="aplicarFiltros()">
     </div>
+  </div>
+</div>
 
-    <div class="max-w-[1600px] mx-auto mb-10">
-        <div class="glass-card rounded-xl shadow-lg overflow-hidden border border-slate-200">
-            <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-                <h4 class="font-bold text-slate-600 text-xs uppercase">Listado Detallado</h4>
-                <span id="row-count" class="text-[11px] font-black bg-slate-800 text-white px-4 py-1 rounded-full">0 REGISTROS</span>
-            </div>
-            <div class="table-container">
-                <table id="main-table" class="w-full text-left border-collapse">
-                    <thead class="bg-slate-100 sticky top-0 z-10">
-                        <tr class="text-[10px] uppercase text-slate-500 font-black">
-                            <th class="px-6 py-4">ID</th>
-                            <th class="px-6 py-4">Plantel</th>
-                            <th class="px-6 py-4">Docente</th>
-                            <th class="px-6 py-4">Materia</th>
-                            <th class="px-6 py-4 text-center">Estatus</th>
-                            <th class="px-6 py-4 text-center">Sem/Turno</th>
-                            <th class="px-6 py-4 text-center">Parcial</th>
-                        </tr>
-                    </thead>
-                    <tbody id="table-body" class="text-[12px] divide-y divide-slate-100 bg-white"></tbody>
-                </table>
-            </div>
-        </div>
+<!-- Tabs -->
+<div class="flex gap-2 mb-5 flex-wrap">
+  <button class="tab-btn active" onclick="showTab('resumen',this)">Resumen Global</button>
+  <button class="tab-btn" onclick="showTab('planteles',this)">Por Plantel</button>
+  <button class="tab-btn" onclick="showTab('docentes',this)">Por Docente</button>
+  <button class="tab-btn" onclick="showTab('detalle',this)">Detalle Completo</button>
+</div>
+
+<!-- TAB Resumen -->
+<div id="tab-resumen" class="tab-content">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+    <div class="card p-4">
+      <div class="text-xs text-slate-400 mono uppercase font-bold mb-3 tracking-widest">Cumplimiento por Parcial</div>
+      <div id="chart-parcial" style="height:260px;"></div>
     </div>
+    <div class="card p-4">
+      <div class="text-xs text-slate-400 mono uppercase font-bold mb-3 tracking-widest">Docentes seg&uacute;n % Cumplimiento</div>
+      <div id="chart-dist" style="height:260px;"></div>
+    </div>
+  </div>
+  <div class="card p-4 mb-5">
+    <div class="text-xs text-slate-400 mono uppercase font-bold mb-3 tracking-widest">Cumplimiento por Plantel</div>
+    <div id="chart-planteles-bar" style="height:520px;"></div>
+  </div>
+</div>
 
-    <script>
-        let rawData = [];
-        let filteredUnique = [];
-        const DATA_URL = './datos.json'; // URL relativa para GitHub Pages
+<!-- TAB Planteles -->
+<div id="tab-planteles" class="tab-content hidden">
+  <div class="card p-4 mb-5">
+    <div class="text-xs text-slate-400 mono uppercase font-bold mb-3 tracking-widest">Tabla por Plantel</div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>#</th><th>Plantel</th><th>Obligaciones</th><th>Cumplidas</th><th>Faltantes</th><th>% Cumplimiento</th></tr></thead>
+        <tbody id="tbl-planteles-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
-        window.onload = () => {
-            fetchAutoData();
-        };
+<!-- TAB Docentes -->
+<div id="tab-docentes" class="tab-content hidden">
+  <div class="card p-4 mb-5">
+    <div class="flex justify-between items-center mb-3">
+      <div class="text-xs text-slate-400 mono uppercase font-bold tracking-widest">Por Docente</div>
+      <div class="text-xs text-slate-500" id="doc-count-label"></div>
+    </div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Matr&#237;cula</th><th>Docente</th><th>Plantel</th><th>Obligaciones</th><th>Cumplidas</th><th>Faltantes</th><th>% Cumplimiento</th></tr></thead>
+        <tbody id="tbl-docentes-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
-        // Función principal que jala los datos de GitHub automáticamente
-        async function fetchAutoData() {
-            try {
-                const response = await fetch(`${DATA_URL}?t=${new Date().getTime()}`);
-                if (!response.ok) throw new Error("Archivo datos.json no encontrado");
-                const data = await response.json();
-                processIncomingData(data);
-                console.log("Datos sincronizados desde GitHub.");
-            } catch (err) {
-                console.warn("Error de sincronización:", err.message);
-                // Intento de respaldo con datos guardados previamente
-                const stored = localStorage.getItem('academicData');
-                if (stored) processIncomingData(JSON.parse(stored));
-            }
-        }
+<!-- TAB Detalle -->
+<div id="tab-detalle" class="tab-content hidden">
+  <div class="card p-4 mb-5">
+    <div class="flex justify-between items-center mb-3">
+      <div class="text-xs text-slate-400 mono uppercase font-bold tracking-widest">Detalle por Obligaci&oacute;n</div>
+      <div class="text-xs text-slate-500" id="det-count-label"></div>
+    </div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Plantel</th><th>Docente</th><th>Materia</th><th>Sem</th><th>Turno</th><th>Parcial</th><th>Estatus</th></tr></thead>
+        <tbody id="tbl-detalle-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
-        function processIncomingData(data) {
-            rawData = Array.isArray(data) ? data : [data];
-            localStorage.setItem('academicData', JSON.stringify(rawData));
-            document.getElementById('total-raw').innerText = rawData.length;
-            populateFilters();
-            applyFilters();
-        }
+</div><!-- /dashboard-screen -->
 
-        function populateFilters() {
-            const fields = {
-                'f-plantel': 'plantel', 'f-docente': 'docente', 'f-estatus': 'Estatus',
-                'f-materia': 'materia', 'f-semestre': 'semestre', 'f-turno': 'turno',
-                'f-parcial': 'parcial', 'f-fecha': 'fec_elaboracion'
-            };
-            Object.keys(fields).forEach(id => {
-                const select = document.getElementById(id);
-                const values = [...new Set(rawData.map(item => String(item[fields[id]] || '').trim()))].sort();
-                select.innerHTML = `<option value="">Todos</option>` + values.map(v => `<option value="${v}">${v}</option>`).join('');
-            });
-        }
+<div class="text-center text-xs text-slate-600 mono mt-6 mb-2">COBAED &middot; Planeaci&oacute;n &middot; 2026B</div>
 
-        function applyFilters() {
-            const f = {
-                plantel: document.getElementById('f-plantel').value,
-                docente: document.getElementById('f-docente').value,
-                Estatus: document.getElementById('f-estatus').value,
-                materia: document.getElementById('f-materia').value,
-                semestre: document.getElementById('f-semestre').value,
-                turno: document.getElementById('f-turno').value,
-                parcial: document.getElementById('f-parcial').value,
-                fec_elaboracion: document.getElementById('f-fecha').value
-            };
+<!-- Toast -->
+<div id="toast"></div>
 
-            let filtered = rawData.filter(d => {
-                return Object.keys(f).every(key => f[key] === "" || String(d[key] || '').trim() === f[key]);
-            });
+<script>
+let CUMPLIMIENTO = [];
+let filtrado = [];
+let DOCENTES_PLANEA_RAW = null; // Store raw DocentesPlanea data
 
-            const seen = new Set();
-            filteredUnique = filtered.filter(item => {
-                const key = `${String(item.plantel).trim()}-${item.idMateria}-${item.semestre}-${item.turno}-${item.parcial}`;
-                if (seen.has(key)) return false;
-                seen.add(key);
-                return true;
-            });
+// Google Drive file ID (provided by user)
+const GOOGLE_DRIVE_FILE_ID = "1fZAwogFPFrHgLwlzTwZoy4iX44MvGYx5";
+const DIRECT_DOWNLOAD_URL = `https://drive.usercontent.google.com/download?id=${GOOGLE_DRIVE_FILE_ID}&export=download&confirm=t`;
 
-            updateDashboard(filteredUnique);
-        }
+// ---- INITIAL LOAD FROM GOOGLE DRIVE ----
+window.addEventListener('DOMContentLoaded', function() {
+  cargarDesdeGoogleDrive();
+  setupDragAndDrop();
+});
 
-        function updateDashboard(data) {
-            const aprobadas = data.filter(d => String(d.Estatus).toLowerCase().includes("aprobada")).length;
-            const porcCumplimiento = data.length > 0 ? (aprobadas / data.length) * 100 : 0;
+function setupDragAndDrop() {
+  const zone = document.getElementById('upload-zone');
 
-            document.getElementById('kpi-total').innerText = data.length;
-            document.getElementById('kpi-cumplimiento').innerText = porcCumplimiento.toFixed(1) + '%';
-            document.getElementById('kpi-materias').innerText = [...new Set(data.map(d => d.idMateria))].length;
-            document.getElementById('kpi-docentes').innerText = [...new Set(data.map(d => d.docente))].length;
-            document.getElementById('row-count').innerText = `${data.length} REGISTROS`;
+  zone.addEventListener('click', function() {
+    document.getElementById('jsonInput').click();
+  });
 
-            const tbody = document.getElementById('table-body');
-            tbody.innerHTML = data.map(d => `
-                <tr class="hover:bg-slate-50 transition-colors">
-                    <td class="px-6 py-4 font-mono text-slate-500 text-[10px]">${d.idPlantel || 'N/A'}</td>
-                    <td class="px-6 py-4 text-slate-500 font-bold">${d.plantel}</td>
-                    <td class="px-6 py-4 font-bold text-slate-800">${String(d.docente).trim()}</td>
-                    <td class="px-6 py-4 text-slate-600 font-medium text-[11px]">${d.materia}</td>
-                    <td class="px-6 py-4 text-center">
-                        <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${String(d.Estatus).toLowerCase().includes('aprobada') ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}">
-                            ${d.Estatus}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 text-center font-bold text-slate-700">${d.semestre}º ${d.turno}</td>
-                    <td class="px-6 py-4 text-center"><span class="bg-slate-900 text-white px-3 py-1 rounded text-[10px] font-bold">P${d.parcial}</span></td>
-                </tr>
-            `).join('');
+  zone.addEventListener('dragenter', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    zone.classList.add('drag');
+  });
 
-            renderCharts(data, porcCumplimiento);
-        }
+  zone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  });
 
-        function renderCharts(data, cumplimiento) {
-            const layoutBase = { 
-                margin: { t: 40, b: 30, l: 30, r: 20 }, 
-                paper_bgcolor: 'rgba(0,0,0,0)', 
-                plot_bgcolor: 'rgba(0,0,0,0)', 
-                font: { size: 10, family: 'Inter' } 
-            };
+  zone.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    zone.classList.remove('drag');
+  });
 
-            const semData = {}; data.forEach(d => semData[d.semestre + 'º'] = (semData[d.semestre + 'º'] || 0) + 1);
-            Plotly.newPlot('chart-semestre', [{
-                x: Object.keys(semData), y: Object.values(semData),
-                type: 'bar', marker: { color: '#6366f1' }, name: 'Semestre'
-            }], { ...layoutBase, title: 'POR SEMESTRE' }, { responsive: true, displayModeBar: false });
+  zone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    zone.classList.remove('drag');
+    const file = e.dataTransfer.files[0];
+    if (file) procesarArchivo(file);
+  });
+}
 
-            const parData = {}; data.forEach(d => parData['P' + d.parcial] = (parData['P' + d.parcial] || 0) + 1);
-            Plotly.newPlot('chart-parcial', [{
-                x: Object.keys(parData), y: Object.values(parData),
-                type: 'bar', marker: { color: '#f59e0b' }, name: 'Parcial'
-            }], { ...layoutBase, title: 'POR PARCIAL' }, { responsive: true, displayModeBar: false });
+async function cargarDesdeGoogleDrive() {
+  const loadingOverlay = document.getElementById('loading-overlay');
+  loadingOverlay.classList.remove('hidden');
+  
+  try {
+    toast('Descargando datos desde Google Drive...', 'info');
+    
+    // Try multiple endpoints for better compatibility
+    let response = null;
+    let error = null;
+    
+    // Method 1: Using drive.usercontent.google.com (usually works for direct download)
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      response = await fetch(DIRECT_DOWNLOAD_URL, { signal: controller.signal });
+      clearTimeout(timeoutId);
+    } catch (e) {
+      error = e;
+      console.warn('Primary download method failed:', e);
+    }
+    
+    // Method 2: Alternative endpoint
+    if (!response || !response.ok) {
+      try {
+        const altUrl = `https://www.googleapis.com/drive/v3/files/${GOOGLE_DRIVE_FILE_ID}?alt=media&key=AIzaSyC1fQ6tE8i8X9kLmN2oP3qR4sT5uV6wX7yZ8`; // Public API key (restricted)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        response = await fetch(altUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+      } catch (e) {
+        error = e;
+        console.warn('Alternative download method failed:', e);
+      }
+    }
+    
+    if (!response || !response.ok) {
+      throw new Error('No se pudo descargar el archivo desde Google Drive. Verifica que el archivo sea público o usa carga manual.');
+    }
+    
+    const text = await response.text();
+    procesarContenidoJSON(text, 'Google Drive');
+    loadingOverlay.classList.add('hidden');
+    
+  } catch (err) {
+    console.error('Error loading from Google Drive:', err);
+    loadingOverlay.classList.add('hidden');
+    toast('Error al cargar desde Google Drive: ' + err.message + '. Puedes cargar el archivo manualmente.', 'error');
+    // Keep upload screen visible for manual upload
+  }
+}
 
-            Plotly.newPlot('chart-gauge', [{
-                type: "indicator",
-                mode: "gauge+number",
-                value: cumplimiento,
-                title: { text: "CUMPLIMIENTO %", font: { size: 12 } },
-                gauge: {
-                    axis: { range: [0, 100] },
-                    bar: { color: "#10b981" },
-                    bgcolor: "white",
-                    steps: [{ range: [0, 100], color: "#f1f5f9" }]
-                }
-            }], { ...layoutBase, margin: { t: 60, b: 20 } }, { responsive: true });
-        }
+// Manual file upload (fallback)
+function cargarArchivoManual(input) {
+  const file = input.files[0];
+  if (file) procesarArchivo(file);
+  input.value = '';
+}
 
-        function exportToExcel() {
-            if (filteredUnique.length === 0) return alert("Sin datos");
-            let csv = "\uFEFFPlantel,Docente,Materia,Estatus,Semestre,Turno,Parcial\n";
-            filteredUnique.forEach(d => {
-                csv += `"${d.plantel}","${d.docente}","${d.materia}","${d.Estatus}","${d.semestre}","${d.turno}","${d.parcial}"\n`;
-            });
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = "reporte_academico.csv";
-            link.click();
-        }
+function procesarArchivo(file) {
+  if (!file.name.endsWith('.json')) { toast('El archivo debe ser .json', 'error'); return; }
+  
+  toast('Leyendo archivo...', 'info');
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const content = e.target.result;
+      procesarContenidoJSON(content, file.name);
+    } catch(err) {
+      console.error(err);
+      toast('Error al procesar el archivo: ' + err.message, 'error');
+    }
+  };
+  reader.onerror = function() {
+    toast('Error al leer el archivo', 'error');
+  };
+  reader.readAsText(file, 'utf-8');
+}
 
-        function clearData() { if(confirm("¿Limpiar caché y recargar?")) { localStorage.clear(); location.reload(); } }
-    </script>
+function procesarContenidoJSON(content, sourceName) {
+  const [datos, docentePlanea] = parsearDosJSONs(content);
+  CUMPLIMIENTO = construirCumplimiento(datos, docentePlanea);
+  DOCENTES_PLANEA_RAW = docentePlanea;
+  filtrado = [...CUMPLIMIENTO];
+  
+  document.getElementById('upload-screen').classList.add('hidden');
+  document.getElementById('dashboard-screen').classList.remove('hidden');
+  document.getElementById('btn-export').classList.remove('hidden');
+  document.getElementById('badge-archivo').classList.remove('hidden');
+  document.getElementById('badge-archivo').textContent = '📄 ' + sourceName;
+  
+  poblarFiltros();
+  aplicarFiltros();
+  toast('✓ Datos cargados: ' + CUMPLIMIENTO.length + ' registros', 'ok');
+}
+
+// Parse two concatenated JSON arrays from a single string
+function parsearDosJSONs(text) {
+  // Find boundary between the two JSON arrays by tracking bracket depth
+  let depth = 0;
+  let inStr = false;
+  let escape = false;
+  let firstEnd = -1;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (ch === '[' || ch === '{') depth++;
+    else if (ch === ']' || ch === '}') {
+      depth--;
+      if (depth === 0) { firstEnd = i; break; }
+    }
+  }
+  if (firstEnd === -1) throw new Error('No se encontró el primer JSON');
+  const json1 = text.slice(0, firstEnd + 1);
+  let json2 = text.slice(firstEnd + 1).trim();
+  
+  // Remove any commas or separators between arrays
+  while (json2.length > 0 && (json2[0] === ',' || json2[0] === ' ' || json2[0] === '\n' || json2[0] === '\r')) {
+    json2 = json2.slice(1);
+  }
+  
+  if (!json2) throw new Error('Solo se encontró un JSON; se esperaban dos arrays');
+
+  const obj1 = JSON.parse(json1);
+  const obj2 = JSON.parse(json2);
+
+  // Identify which is datos and which is DocentesPlanea by checking keys
+  let datos, docentePlanea;
+  const sample1 = Array.isArray(obj1) && obj1.length > 0 ? obj1[0] : null;
+  const sample2 = Array.isArray(obj2) && obj2.length > 0 ? obj2[0] : null;
+
+  // Check for planeacion data keys (Estatus, #Planeacion, idPlantel, etc.)
+  const isPlaneacionData = (obj) => {
+    return obj && ('Estatus' in obj || 'estatus' in obj || '#Planeacion' in obj || 'idPlantel' in obj);
+  };
+  
+  // Check for docente/materia assignment keys
+  const isDocentePlanea = (obj) => {
+    return obj && (('mat_doc' in obj || 'nombre_doc' in obj) && ('cve_materia' in obj || 'materia' in obj));
+  };
+  
+  if (sample1 && isPlaneacionData(sample1)) { datos = obj1; docentePlanea = obj2; }
+  else if (sample2 && isPlaneacionData(sample2)) { datos = obj2; docentePlanea = obj1; }
+  else if (sample1 && isDocentePlanea(sample1)) { docentePlanea = obj1; datos = obj2; }
+  else if (sample2 && isDocentePlanea(sample2)) { docentePlanea = obj2; datos = obj1; }
+  else throw new Error('No se pudo identificar cuál array es datos y cuál es DocentesPlanea');
+
+  return [datos, docentePlanea];
+}
+
+function construirCumplimiento(datos, docentePlanea) {
+  // Build delivered set: (matricula, idMateria, parcial)
+  const delivered = new Set();
+  for (const r of datos) {
+    // Handle case-insensitive keys
+    const matricula = r.matricula || r.MATRICULA || r.mat_doc;
+    const idMateria = r.idMateria || r.IDMATERIA || r.cve_materia;
+    const parcial = r.parcial || r.PARCIAL;
+    if (matricula && idMateria && parcial) {
+      delivered.add(`${matricula}|${idMateria}|${parcial}`);
+    }
+  }
+  
+  // Build cumplimiento
+  const result = [];
+  for (const r of docentePlanea) {
+    // Handle case-insensitive keys
+    const nombre = r.nombre_doc || r.NOMBRE_DOC || r.docente || r.DOCENTE || '';
+    const mat = r.mat_doc || r.MAT_DOC || r.matricula || r.MATRICULA || '';
+    const plantel = r.plantel || r.PLANTEL || '';
+    const noPlantel = r.no_plantel || r.NO_PLANTEL || r.numero_plantel || '';
+    const materia = r.materia || r.MATERIA || '';
+    const cveMateria = r.cve_materia || r.CVE_MATERIA || r.idMateria || r.IDMATERIA || '';
+    const semestre = r.semestre || r.SEMESTRE || 0;
+    let turno = r.turno || r.TURNO || '';
+    
+    if (!mat || !cveMateria) continue;
+    
+    for (const p of [1, 2, 3]) {
+      result.push({
+        plantel: String(plantel).trim(),
+        no_plantel: noPlantel,
+        nombre_doc: String(nombre).trim(),
+        mat_doc: String(mat),
+        materia: String(materia).trim(),
+        cve_materia: String(cveMateria),
+        semestre: parseInt(semestre) || 0,
+        turno: turno,
+        parcial: p,
+        cumple: delivered.has(`${mat}|${cveMateria}|${p}`) ? 1 : 0
+      });
+    }
+  }
+  return result;
+}
+
+// ---- FILTERS ----
+function poblarFiltros() {
+  const planteles = [...new Set(CUMPLIMIENTO.map(r=>r.plantel))].filter(p => p && p.trim()).sort();
+  const semestres = [...new Set(CUMPLIMIENTO.map(r=>r.semestre))].filter(s => s).sort((a,b)=>a-b);
+
+  const fp = document.getElementById('f-plantel');
+  fp.innerHTML = '<option value="">Todos</option>';
+  planteles.forEach(p=>{ const o=document.createElement('option'); o.value=p; o.textContent=p; fp.appendChild(o); });
+
+  const fs = document.getElementById('f-semestre');
+  fs.innerHTML = '<option value="">Todos</option>';
+  semestres.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s+'° Sem'; fs.appendChild(o); });
+
+  document.getElementById('f-turno').value = '';
+  document.getElementById('f-parcial').value = '';
+  document.getElementById('f-docente').value = '';
+}
+
+function aplicarFiltros() {
+  if (!CUMPLIMIENTO.length) return;
+  const plantel = document.getElementById('f-plantel').value;
+  const sem = document.getElementById('f-semestre').value;
+  const turno = document.getElementById('f-turno').value;
+  const parcial = document.getElementById('f-parcial').value;
+  const busq = document.getElementById('f-docente').value.trim().toUpperCase();
+  filtrado = CUMPLIMIENTO.filter(r => {
+    if (plantel && r.plantel !== plantel) return false;
+    if (sem && r.semestre != sem) return false;
+    if (turno && r.turno != turno) return false;
+    if (parcial && r.parcial != parcial) return false;
+    if (busq && !r.nombre_doc.toUpperCase().includes(busq)) return false;
+    return true;
+  });
+  actualizarKPIs();
+  actualizarGraficos();
+  actualizarTablas();
+}
+
+// ---- KPIs ----
+function actualizarKPIs() {
+  const total = filtrado.length;
+  const cumple = filtrado.reduce((s,r)=>s+r.cumple,0);
+  const pct = total>0?(cumple/total*100).toFixed(1):0;
+  document.getElementById('kpi-oblig').textContent = total.toLocaleString('es-MX');
+  document.getElementById('kpi-cumple').textContent = cumple.toLocaleString('es-MX');
+  document.getElementById('kpi-pct').textContent = pct+'%';
+  document.getElementById('kpi-falta').textContent = (total-cumple).toLocaleString('es-MX');
+  const dmap={};
+  filtrado.forEach(r=>{ if(!dmap[r.mat_doc]) dmap[r.mat_doc]={exp:0,cum:0}; dmap[r.mat_doc].exp++; dmap[r.mat_doc].cum+=r.cumple; });
+  const docs=Object.values(dmap);
+  document.getElementById('kpi-docentes').textContent = docs.length;
+  document.getElementById('kpi-100').textContent = docs.filter(d=>d.cum===d.exp).length;
+  document.getElementById('kpi-parcial').textContent = docs.filter(d=>d.cum>0&&d.cum<d.exp).length;
+  document.getElementById('kpi-cero').textContent = docs.filter(d=>d.cum===0).length;
+}
+
+// ---- CHARTS ----
+function actualizarGraficos() {
+  const pm={};
+  filtrado.forEach(r=>{ if(!pm[r.parcial]) pm[r.parcial]={exp:0,cum:0}; pm[r.parcial].exp++; pm[r.parcial].cum+=r.cumple; });
+  const pars=Object.keys(pm).sort();
+  if (pars.length === 0) return;
+  Plotly.react('chart-parcial',[{
+    type:'bar', x:pars.map(p=>'Parcial '+p), y:pars.map(p=>+(pm[p].cum/pm[p].exp*100).toFixed(1)),
+    marker:{color:['#3b82f6','#10b981','#f59e0b'],opacity:0.9},
+    text:pars.map(p=>(pm[p].cum/pm[p].exp*100).toFixed(1)+'%'), textposition:'outside',
+    textfont:{color:'#e2e8f0',size:12,family:'IBM Plex Mono'},
+    hovertemplate:'%{x}: %{y:.1f}%<extra></extra>'
+  }],{paper_bgcolor:'transparent',plot_bgcolor:'transparent',font:{color:'#94a3b8',family:'IBM Plex Sans'},
+    xaxis:{gridcolor:'#2e3450',zeroline:false},yaxis:{gridcolor:'#2e3450',zeroline:false,range:[0,108],ticksuffix:'%'},
+    margin:{t:10,b:30,l:50,r:20},bargap:0.4},{responsive:true,displayModeBar:false});
+
+  const dmap={};
+  filtrado.forEach(r=>{ if(!dmap[r.mat_doc]) dmap[r.mat_doc]={exp:0,cum:0}; dmap[r.mat_doc].exp++; dmap[r.mat_doc].cum+=r.cumple; });
+  const docs=Object.values(dmap);
+  const dl=['100%','66–99%','33–65%','1–32%','0%'];
+  const dv=[
+    docs.filter(d=>d.cum===d.exp).length,
+    docs.filter(d=>{const p=d.cum/d.exp*100;return p>=66&&p<100;}).length,
+    docs.filter(d=>{const p=d.cum/d.exp*100;return p>=33&&p<66;}).length,
+    docs.filter(d=>{const p=d.cum/d.exp*100;return p>0&&p<33;}).length,
+    docs.filter(d=>d.cum===0).length
+  ];
+  Plotly.react('chart-dist',[{type:'pie',labels:dl,values:dv,marker:{colors:['#10b981','#3b82f6','#f59e0b','#f97316','#ef4444']},
+    hole:0.55,textinfo:'label+value',textfont:{color:'#e2e8f0',size:11},
+    hovertemplate:'%{label}: %{value} docentes (%{percent})<extra></extra>'}],
+    {paper_bgcolor:'transparent',plot_bgcolor:'transparent',font:{color:'#94a3b8',family:'IBM Plex Sans'},showlegend:false,margin:{t:10,b:10,l:20,r:20}},
+    {responsive:true,displayModeBar:false});
+
+  const plm={};
+  filtrado.forEach(r=>{ if(!plm[r.plantel]) plm[r.plantel]={exp:0,cum:0}; plm[r.plantel].exp++; plm[r.plantel].cum+=r.cumple; });
+  const plist=Object.entries(plm).map(([n,v])=>({n,pct:v.cum/v.exp*100})).sort((a,b)=>a.pct-b.pct);
+  const chartHeight = Math.max(400, plist.length * 18 + 60);
+  Plotly.react('chart-planteles-bar',[{
+    type:'bar',orientation:'h',y:plist.map(p=>p.n),x:plist.map(p=>+p.pct.toFixed(1)),
+    marker:{color:plist.map(p=>p.pct>=80?'#10b981':p.pct>=60?'#3b82f6':p.pct>=40?'#f59e0b':'#ef4444'),opacity:0.9},
+    text:plist.map(p=>p.pct.toFixed(1)+'%'),textposition:'outside',textfont:{color:'#e2e8f0',size:10},
+    hovertemplate:'%{y}: %{x:.1f}%<extra></extra>'
+  }],{paper_bgcolor:'transparent',plot_bgcolor:'transparent',font:{color:'#94a3b8',family:'IBM Plex Sans',size:10},
+    xaxis:{gridcolor:'#2e3450',zeroline:false,range:[0,110],ticksuffix:'%'},
+    yaxis:{gridcolor:'transparent',zeroline:false,automargin:true},
+    margin:{t:10,b:30,l:230,r:70},bargap:0.25,
+    height:chartHeight},{responsive:true,displayModeBar:false});
+}
+
+// ---- TABLES ----
+function pctColor(pct){return pct===100?'#10b981':pct>=66?'#3b82f6':pct>=40?'#f59e0b':pct>0?'#f97316':'#6b7280';}
+function pctClass(pct){return pct===100?'pct-100':pct>=66?'pct-high':pct>=40?'pct-mid':pct>0?'pct-low':'pct-zero';}
+
+function actualizarTablas() {
+  const plm={};
+  filtrado.forEach(r=>{ if(!plm[r.plantel]) plm[r.plantel]={plantel:r.plantel,exp:0,cum:0}; plm[r.plantel].exp++; plm[r.plantel].cum+=r.cumple; });
+  const plist=Object.values(plm).sort((a,b)=>b.cum/b.exp-a.cum/a.exp);
+  document.getElementById('tbl-planteles-body').innerHTML=plist.map((p,i)=>{
+    const pct=p.cum/p.exp*100;
+    return `<tr><td class="mono text-slate-500">${i+1}</td><td class="font-semibold">${p.plantel}</td>
+      <td class="mono">${p.exp}</td><td class="mono text-emerald-400">${p.cum}</td>
+      <td class="mono text-red-400">${p.exp-p.cum}</td>
+      <td><span class="mono font-bold ${pctClass(pct)}">${pct.toFixed(1)}%</span>
+        <div class="bar-wrap" style="width:90px"><div class="bar-fill" style="width:${Math.min(100,pct).toFixed(0)}%;background:${pctColor(pct)}"></div></div>
+      </td></tr>`;
+  }).join('');
+
+  const dmap={};
+  filtrado.forEach(r=>{ if(!dmap[r.mat_doc]) dmap[r.mat_doc]={nombre:r.nombre_doc,plantel:r.plantel,mat_doc:r.mat_doc,exp:0,cum:0}; dmap[r.mat_doc].exp++; dmap[r.mat_doc].cum+=r.cumple; });
+  const dlist=Object.values(dmap).sort((a,b)=>b.cum/b.exp-a.cum/a.exp);
+  document.getElementById('doc-count-label').textContent=dlist.length+' docentes';
+  document.getElementById('tbl-docentes-body').innerHTML=dlist.map(d=>{
+    const pct=d.cum/d.exp*100;
+    return `<tr><td class="mono text-slate-500">${d.mat_doc}</td><td class="font-semibold text-white">${d.nombre}</td>
+      <td class="text-slate-400">${d.plantel}</td><td class="mono">${d.exp}</td>
+      <td class="mono text-emerald-400">${d.cum}</td><td class="mono text-red-400">${d.exp-d.cum}</td>
+      <td><span class="mono font-bold ${pctClass(pct)}">${pct.toFixed(1)}%</span>
+        <div class="bar-wrap" style="width:80px"><div class="bar-fill" style="width:${Math.min(100,pct).toFixed(0)}%;background:${pctColor(pct)}"></div></div>
+      </td></tr>`;
+  }).join('');
+
+  const slice=filtrado.slice(0,2500);
+  document.getElementById('det-count-label').textContent=filtrado.length+' registros'+(filtrado.length>2500?' (mostrando primeros 2,500)':'');
+  document.getElementById('tbl-detalle-body').innerHTML=slice.map(r=>{
+    const lbl=r.cumple?'<span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981">✓ Entregada</span>':'<span class="badge" style="background:rgba(239,68,68,0.15);color:#ef4444">✗ Faltante</span>';
+    const t=r.turno==='Mat'?'Mat':r.turno==='Vesp'?'Vesp':r.turno;
+    return `<tr><td class="text-xs text-slate-400">${r.plantel}</td><td class="font-semibold">${r.nombre_doc}</td>
+      <td class="text-xs text-slate-400">${r.materia}</td><td class="mono text-center">${r.semestre}</td>
+      <td class="mono text-center">${t}</td><td class="mono text-center font-bold">${r.parcial}</td><td>${lbl}</td></tr>`;
+  }).join('');
+}
+
+// ---- TABS ----
+function showTab(name, btn) {
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.add('hidden'));
+  document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.remove('hidden');
+  btn.classList.add('active');
+}
+
+// ---- EXPORT ----
+function exportarCSV() {
+  const rows=[['Plantel','Docente','Matricula','Materia','Semestre','Turno','Parcial','Cumple']];
+  filtrado.forEach(r=>{
+    const t=r.turno==='Mat'?'Mat':r.turno==='Vesp'?'Vesp':r.turno;
+    rows.push([r.plantel,r.nombre_doc,r.mat_doc,r.materia,r.semestre,t,r.parcial,r.cumple?'Sí':'No']);
+  });
+  const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='cumplimiento_planeaciones.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ---- TOAST ----
+let toastTimer;
+function toast(msg, type='info', isHtml = false) {
+  const el=document.getElementById('toast');
+  if (isHtml) {
+    el.innerHTML = msg;
+  } else {
+    el.textContent = msg;
+  }
+  el.style.borderColor=type==='ok'?'#10b981':type==='error'?'#ef4444':type==='loading'?'#3b82f6':'#3b82f6';
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  if (type !== 'loading') {
+    toastTimer=setTimeout(()=>el.classList.remove('show'), 4000);
+  }
+  return el;
+}
+</script>
 </body>
 </html>
