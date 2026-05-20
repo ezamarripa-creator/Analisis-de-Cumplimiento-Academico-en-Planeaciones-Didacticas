@@ -44,127 +44,69 @@
   ::-webkit-scrollbar-track { background:var(--bg); }
   ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
 
-  .loading-overlay {
-    position:fixed; top:0; left:0; right:0; bottom:0;
-    background:rgba(15,17,23,0.95); z-index:1000;
-    display:flex; align-items:center; justify-content:center;
-    flex-direction:column; gap:20px;
-  }
-  .loading-overlay.hidden { display:none; }
-  .loading-spinner { width:48px; height:48px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-  
-  .refresh-btn {
-    display:flex; align-items:center; gap:6px;
-    background:var(--surface2); border:1px solid var(--border);
-    padding:6px 12px; border-radius:8px; font-size:0.7rem;
-    cursor:pointer; transition:all 0.2s;
-  }
-  .refresh-btn:hover { background:var(--surface); border-color:var(--accent); }
-  .refresh-btn svg { width:14px; height:14px; }
-
-  .sync-status { font-size:0.65rem; color:var(--muted); display:flex; align-items:center; gap:6px; }
-  .sync-dot { width:8px; height:8px; border-radius:50%; background:#10b981; }
-  .sync-dot.syncing { background:#f59e0b; animation:pulse 1s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
-
+  /* Toast */
   #toast { position:fixed; bottom:24px; right:24px; background:var(--surface); border:1px solid var(--border);
     border-radius:10px; padding:12px 18px; font-size:0.8rem; z-index:999;
     transform:translateY(80px); opacity:0; transition:all 0.3s; pointer-events:none; }
   #toast.show { transform:translateY(0); opacity:1; }
   
-  .upload-zone {
-    border:2px dashed var(--border); border-radius:16px;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    padding:60px 40px; gap:16px; cursor:pointer; transition:all 0.2s;
-  }
-  .upload-zone:hover { border-color:var(--accent); background:rgba(59,130,246,0.05); }
+  /* Loading spinner */
+  .spinner { display:inline-block; width:20px; height:20px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.6s linear infinite; margin-right:8px; vertical-align:middle; }
+  @keyframes spin { to { transform:rotate(360deg); } }
 </style>
 </head>
 <body class="p-4 md:p-6">
 
-<div id="loadingOverlay" class="loading-overlay">
-  <div class="loading-spinner"></div>
-  <div class="text-slate-400">Cargando datos desde el repositorio...</div>
-  <div class="text-xs text-slate-600">Sincronizando con COBAED</div>
-</div>
-
-<!-- Header -->
 <div class="card p-5 mb-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
   <div>
     <div class="text-xs text-blue-400 mono font-semibold uppercase tracking-widest mb-1">COBAED &mdash; Planeaciones Did&aacute;cticas 2026B</div>
     <h1 class="text-xl font-bold text-white">Dashboard de Cumplimiento</h1>
     <p class="text-sm text-slate-400 mt-1">Seguimiento por docente, materia y parcial</p>
   </div>
-  <div class="flex gap-3 flex-wrap items-center">
-    <button id="btnRefresh" onclick="sincronizarDatos()" class="refresh-btn">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-      </svg>
-      Sincronizar
-    </button>
-    <button id="btnExport" onclick="exportarCSV()" class="hidden items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition">
+  <div class="flex gap-2 flex-wrap items-center">
+    <button id="btn-export" onclick="exportarCSV()" class="hidden flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition">
       &#8595; Exportar CSV
     </button>
-    <div id="syncStatus" class="sync-status">
-      <span id="syncDot" class="sync-dot"></span>
-      <span id="syncText">Sincronizado</span>
-    </div>
+    <div id="badge-archivo" class="hidden text-xs mono text-slate-400 bg-slate-800 px-3 py-2 rounded-lg border border-slate-700"></div>
   </div>
 </div>
 
-<!-- Upload screen -->
-<div id="uploadScreen">
-  <div class="upload-zone" onclick="document.getElementById('jsonInput').click()">
-    <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" fill="none" viewBox="0 0 24 24" stroke="#64748b" stroke-width="1.5">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V7a2 2 0 012-2h5l2 2h5a2 2 0 012 2v10a2 2 0 01-2 2z"/>
-    </svg>
-    <div class="text-center">
-      <div class="text-white font-semibold text-lg">Cargar archivo JSON</div>
-      <div class="text-slate-400 text-sm mt-1">Haz clic para seleccionar el archivo</div>
-      <div class="text-slate-600 text-xs mt-3">Si la sincronización automática falla, carga el archivo manualmente</div>
-    </div>
-  </div>
-  <input type="file" id="jsonInput" accept=".json" class="hidden" onchange="cargarArchivoManual(this)">
-</div>
-
-<!-- Dashboard -->
-<div id="dashboardScreen" class="hidden">
+<div id="dashboard-screen" class="hidden">
 
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
   <div class="card p-5 border-t-2 border-blue-500">
-    <div class="kpi-val text-blue-400 mono" id="kpiOblig">—</div>
+    <div class="kpi-val text-blue-400 mono" id="kpi-oblig">—</div>
     <div class="kpi-label">Obligaciones Totales</div>
   </div>
   <div class="card p-5 border-t-2 border-emerald-500">
-    <div class="kpi-val text-emerald-400 mono" id="kpiCumple">—</div>
+    <div class="kpi-val text-emerald-400 mono" id="kpi-cumple">—</div>
     <div class="kpi-label">Cumplidas</div>
   </div>
   <div class="card p-5 border-t-2 border-amber-500">
-    <div class="kpi-val text-amber-400 mono" id="kpiPct">—</div>
+    <div class="kpi-val text-amber-400 mono" id="kpi-pct">—</div>
     <div class="kpi-label">% Cumplimiento Global</div>
   </div>
   <div class="card p-5 border-t-2 border-red-500">
-    <div class="kpi-val text-red-400 mono" id="kpiFalta">—</div>
+    <div class="kpi-val text-red-400 mono" id="kpi-falta">—</div>
     <div class="kpi-label">Planeaciones Faltantes</div>
   </div>
 </div>
 
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
   <div class="card2 p-4 text-center">
-    <div class="text-2xl font-bold mono text-white" id="kpiDocentes">—</div>
+    <div class="text-2xl font-bold mono text-white" id="kpi-docentes">—</div>
     <div class="kpi-label">Docentes con obligaci&oacute;n</div>
   </div>
   <div class="card2 p-4 text-center">
-    <div class="text-2xl font-bold mono text-emerald-400" id="kpi100">—</div>
+    <div class="text-2xl font-bold mono text-emerald-400" id="kpi-100">—</div>
     <div class="kpi-label">Docentes al 100%</div>
   </div>
   <div class="card2 p-4 text-center">
-    <div class="text-2xl font-bold mono text-amber-400" id="kpiParcial">—</div>
+    <div class="text-2xl font-bold mono text-amber-400" id="kpi-parcial">—</div>
     <div class="kpi-label">Cumplimiento parcial</div>
   </div>
   <div class="card2 p-4 text-center">
-    <div class="text-2xl font-bold mono text-red-400" id="kpiCero">—</div>
+    <div class="text-2xl font-bold mono text-red-400" id="kpi-cero">—</div>
     <div class="kpi-label">Sin entregar</div>
   </div>
 </div>
@@ -172,20 +114,20 @@
 <div class="card p-4 mb-5">
   <div class="text-xs text-slate-400 mono uppercase font-bold mb-3 tracking-widest">Filtros</div>
   <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-    <div><label class="text-xs text-slate-500 block mb-1">Plantel</label><select id="fPlantel" onchange="aplicarFiltros()"><option value="">Todos</option></select></div>
-    <div><label class="text-xs text-slate-500 block mb-1">Semestre</label><select id="fSemestre" onchange="aplicarFiltros()"><option value="">Todos</option></select></div>
+    <div><label class="text-xs text-slate-500 block mb-1">Plantel</label><select id="f-plantel" onchange="aplicarFiltros()"><option value="">Todos</option></select></div>
+    <div><label class="text-xs text-slate-500 block mb-1">Semestre</label><select id="f-semestre" onchange="aplicarFiltros()"><option value="">Todos</option></select></div>
     <div><label class="text-xs text-slate-500 block mb-1">Turno</label>
-      <select id="fTurno" onchange="aplicarFiltros()">
-        <option value="">Todos</option><option value="Mat">Matutino</option><option value="Vesp">Vespertino</option>
+      <select id="f-turno" onchange="aplicarFiltros()">
+        <option value="">Todos</option><option value="1">Matutino</option><option value="2">Vespertino</option>
       </select>
     </div>
     <div><label class="text-xs text-slate-500 block mb-1">Parcial</label>
-      <select id="fParcial" onchange="aplicarFiltros()">
+      <select id="f-parcial" onchange="aplicarFiltros()">
         <option value="">Todos</option><option value="1">1er Parcial</option><option value="2">2do Parcial</option><option value="3">3er Parcial</option>
       </select>
     </div>
     <div><label class="text-xs text-slate-500 block mb-1">Buscar docente</label>
-      <input type="text" id="fDocente" placeholder="Nombre..." oninput="aplicarFiltros()">
+      <input type="text" id="f-docente" placeholder="Nombre..." oninput="aplicarFiltros()">
     </div>
   </div>
 </div>
@@ -197,302 +139,162 @@
   <button class="tab-btn" onclick="showTab('detalle',this)">Detalle Completo</button>
 </div>
 
-<div id="tabResumen" class="tab-content">
+<div id="tab-resumen" class="tab-content">
   <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
     <div class="card p-4">
       <div class="text-xs text-slate-400 mono uppercase font-bold mb-3 tracking-widest">Cumplimiento por Parcial</div>
-      <div id="chartParcial" style="height:260px;"></div>
+      <div id="chart-parcial" style="height:260px;"></div>
     </div>
     <div class="card p-4">
       <div class="text-xs text-slate-400 mono uppercase font-bold mb-3 tracking-widest">Docentes seg&uacute;n % Cumplimiento</div>
-      <div id="chartDist" style="height:260px;"></div>
+      <div id="chart-dist" style="height:260px;"></div>
     </div>
   </div>
   <div class="card p-4 mb-5">
     <div class="text-xs text-slate-400 mono uppercase font-bold mb-3 tracking-widest">Cumplimiento por Plantel</div>
-    <div id="chartPlanteles" style="height:520px;"></div>
+    <div id="chart-planteles-bar" style="height:520px;"></div>
   </div>
 </div>
 
-<div id="tabPlanteles" class="tab-content hidden">
+<div id="tab-planteles" class="tab-content hidden">
   <div class="card p-4 mb-5">
     <div class="text-xs text-slate-400 mono uppercase font-bold mb-3 tracking-widest">Tabla por Plantel</div>
     <div class="tbl-wrap">
-      <table class="tbl"><thead><tr><th>#</th><th>Plantel</th><th>Obligaciones</th><th>Cumplidas</th><th>Faltantes</th><th>% Cumplimiento</th></tr></thead>
-      <tbody id="tblPlanteles"></tbody></table>
+      <table class="tbl">
+        <thead><tr><th>#</th><th>Plantel</th><th>Obligaciones</th><th>Cumplidas</th><th>Faltantes</th><th>% Cumplimiento</th></tr></thead>
+        <tbody id="tbl-planteles-body"></tbody>
+      </table>
     </div>
   </div>
 </div>
 
-<div id="tabDocentes" class="tab-content hidden">
+<div id="tab-docentes" class="tab-content hidden">
   <div class="card p-4 mb-5">
     <div class="flex justify-between items-center mb-3">
       <div class="text-xs text-slate-400 mono uppercase font-bold tracking-widest">Por Docente</div>
-      <div class="text-xs text-slate-500" id="docCountLabel"></div>
+      <div class="text-xs text-slate-500" id="doc-count-label"></div>
     </div>
     <div class="tbl-wrap">
-      <table class="tbl"><thead><tr><th>Matrícula</th><th>Docente</th><th>Plantel</th><th>Obligaciones</th><th>Cumplidas</th><th>Faltantes</th><th>% Cumplimiento</th></tr></thead>
-      <tbody id="tblDocentes"></tbody></table>
+      <table class="tbl">
+        <thead><tr><th>Matr&#237;cula</th><th>Docente</th><th>Plantel</th><th>Obligaciones</th><th>Cumplidas</th><th>Faltantes</th><th>% Cumplimiento</th></tr></thead>
+        <tbody id="tbl-docentes-body"></tbody>
+      </table>
     </div>
   </div>
 </div>
 
-<div id="tabDetalle" class="tab-content hidden">
+<div id="tab-detalle" class="tab-content hidden">
   <div class="card p-4 mb-5">
     <div class="flex justify-between items-center mb-3">
       <div class="text-xs text-slate-400 mono uppercase font-bold tracking-widest">Detalle por Obligaci&oacute;n</div>
-      <div class="text-xs text-slate-500" id="detCountLabel"></div>
+      <div class="text-xs text-slate-500" id="det-count-label"></div>
     </div>
     <div class="tbl-wrap">
-      <table class="tbl"><thead><tr><th>Plantel</th><th>Docente</th><th>Materia</th><th>Sem</th><th>Turno</th><th>Parcial</th><th>Estatus</th></tr></thead>
-      <tbody id="tblDetalle"></tbody></table>
+      <table class="tbl">
+        <thead><tr><th>Plantel</th><th>Docente</th><th>Materia</th><th>Sem</th><th>Turno</th><th>Parcial</th><th>Estatus</th></tr></thead>
+        <tbody id="tbl-detalle-body"></tbody>
+      </table>
     </div>
   </div>
 </div>
 
-</div>
+</div><div class="text-center text-xs text-slate-600 mono mt-6 mb-2">COBAED &middot; Planeaci&oacute;n &middot; 2026B</div>
 
-<div class="text-center text-xs text-slate-600 mono mt-6 mb-2">COBAED &middot; Planeaci&oacute;n &middot; 2026B</div>
 <div id="toast"></div>
 
 <script>
-// ============================================
-// CONFIGURACIÓN - URLS DE DATOS
-// ============================================
-// IMPORTANTE: Para actualizar los datos, sube el archivo JSON a:
-// https://jsonbin.io/ (crea una cuenta gratuita, sube el JSON y copia el ID)
-// O usa Google Sheets publicada como CSV
-const DATA_SOURCES = [
-  // Intento 1: Usar JSONBin.io (recomendado - permite CORS)
-  // Para usar: sube tu archivo a https://jsonbin.io y reemplaza el ID
-  // "https://api.jsonbin.io/v3/b/67c8f8e8acd3cb34a8f12345/latest",
-  
-  // Intento 2: Usar GitHub Gist raw (si está configurado)
-  // "https://gist.githubusercontent.com/tuusuario/tugistid/raw/archivo.json",
-  
-  // Intento 3: Usar un proxy CORS para Google Drive
-  `https://corsproxy.io/?https://drive.google.com/uc?export=download&id=1fZAwogFPFrHgLwlzTwZoy4iX44MvGYx5`,
-  
-  // Intento 4: Usar otro proxy CORS
-  `https://api.allorigins.win/raw?url=https://drive.google.com/uc?export=download&id=1fZAwogFPFrHgLwlzTwZoy4iX44MvGYx5`
-];
-
-// Datos de ejemplo para demostración (serán reemplazados por datos reales)
-const DEMO_DATOS = [
-  { matricula: "21804", idMateria: "7342", parcial: 1, Estatus: "Aprobadas" },
-  { matricula: "21804", idMateria: "2511", parcial: 1, Estatus: "Aprobadas" }
-];
-
-const DEMO_DOCENTES = [
-  { mat_doc: "21804", nombre_doc: "RONQUILLO BARRAZA MARIA DEL REFUGIO", cve_materia: "7342", materia: "INTERVENCIÓN EN EL AULA", plantel: "LA FORESTAL", semestre: 4, turno: "Mat" },
-  { mat_doc: "21804", nombre_doc: "RONQUILLO BARRAZA MARIA DEL REFUGIO", cve_materia: "2511", materia: "EDUCACIÓN INTEGRAL EN SEXUALIDAD Y GÉNERO II", plantel: "LA FORESTAL", semestre: 2, turno: "Mat" }
-];
-
 let CUMPLIMIENTO = [];
 let filtrado = [];
 
-// ============================================
-// INICIALIZACIÓN
-// ============================================
+// URL del archivo en el repositorio (misma carpeta del sitio)
+const GITHUB_DATA_URL = 'datos.json';
+
+// Cargar automáticamente los datos al iniciar la página
 window.addEventListener('DOMContentLoaded', function() {
-  sincronizarDatos();
+  obtenerDatosGitHub();
 });
 
-async function sincronizarDatos() {
-  const loadingOverlay = document.getElementById('loadingOverlay');
-  const refreshBtn = document.getElementById('btnRefresh');
-  const syncDot = document.getElementById('syncDot');
-  const syncText = document.getElementById('syncText');
+function obtenerDatosGitHub() {
+  const loadingToast = toast('Descargando datos desde GitHub... <span class="spinner"></span>', 'loading', true);
   
-  loadingOverlay.classList.remove('hidden');
-  refreshBtn.classList.add('refreshing');
-  syncDot.classList.add('syncing');
-  syncText.textContent = 'Sincronizando...';
-  
-  try {
-    let datos = null;
-    let docentePlanea = null;
-    
-    // Intentar obtener datos desde las fuentes configuradas
-    for (const url of DATA_SOURCES) {
-      try {
-        console.log(`Intentando desde: ${url}`);
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-        const response = await fetch(url, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        
-        if (response.ok) {
-          const text = await response.text();
-          let jsonData;
-          try {
-            jsonData = JSON.parse(text);
-          } catch(e) {
-            console.warn('No es JSON válido, buscando arrays en el texto');
-            // Intentar extraer arrays del texto
-            const match = text.match(/\[\s*\{.*?\}\s*\]/gs);
-            if (match && match.length >= 2) {
-              jsonData = [JSON.parse(match[0]), JSON.parse(match[1])];
-            } else {
-              continue;
-            }
-          }
-          
-          // Determinar si tenemos los dos arrays
-          if (Array.isArray(jsonData) && jsonData.length >= 2) {
-            [datos, docentePlanea] = identificarArrays(jsonData[0], jsonData[1]);
-            if (datos && docentePlanea) break;
-          } else if (Array.isArray(jsonData) && jsonData.length === 1) {
-            // Si solo hay un array, buscar el segundo en otra propiedad
-            if (jsonData[0].datos && jsonData[0].docentes) {
-              datos = jsonData[0].datos;
-              docentePlanea = jsonData[0].docentes;
-              break;
-            }
-          } else if (typeof jsonData === 'object' && jsonData.record) {
-            // Para JSONBin.io
-            const record = jsonData.record;
-            if (Array.isArray(record) && record.length >= 2) {
-              [datos, docentePlanea] = identificarArrays(record[0], record[1]);
-              if (datos && docentePlanea) break;
-            }
-          }
-        }
-      } catch (e) {
-        console.warn(`Error con ${url}:`, e.message);
+  fetch(GITHUB_DATA_URL)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('No se pudo descargar el archivo (Status: ' + response.status + ')');
       }
-    }
-    
-    // Si no se pudieron obtener datos remotos, usar datos de demostración
-    if (!datos || !docentePlanea) {
-      console.log('Usando datos de demostración');
-      datos = DEMO_DATOS;
-      docentePlanea = DEMO_DOCENTES;
-      toast('⚠️ Usando datos de demostración. Conecta una fuente de datos real.', 'error');
-    }
-    
-    // Construir el cumplimiento
-    CUMPLIMIENTO = construirCumplimiento(datos, docentePlanea);
-    filtrado = [...CUMPLIMIENTO];
-    
-    // Mostrar dashboard
-    document.getElementById('uploadScreen').classList.add('hidden');
-    document.getElementById('dashboardScreen').classList.remove('hidden');
-    document.getElementById('btnExport').classList.remove('hidden');
-    
-    poblarFiltros();
-    aplicarFiltros();
-    
-    syncDot.classList.remove('syncing');
-    syncDot.style.background = '#10b981';
-    const now = new Date();
-    syncText.textContent = `Sinc. ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-    refreshBtn.classList.remove('refreshing');
-    
-    toast(`✅ Datos cargados: ${CUMPLIMIENTO.length} registros`, 'ok');
-    
-  } catch (err) {
-    console.error('Error:', err);
-    syncDot.classList.remove('syncing');
-    syncDot.style.background = '#ef4444';
-    syncText.textContent = 'Error';
-    refreshBtn.classList.remove('refreshing');
-    toast('❌ Error al sincronizar. Usa la carga manual.', 'error');
-  } finally {
-    loadingOverlay.classList.add('hidden');
-  }
-}
-
-function identificarArrays(arr1, arr2) {
-  const isPlaneacion = (arr) => {
-    if (!Array.isArray(arr) || arr.length === 0) return false;
-    const sample = arr[0];
-    return sample && ('Estatus' in sample || 'matricula' in sample);
-  };
-  
-  const isDocente = (arr) => {
-    if (!Array.isArray(arr) || arr.length === 0) return false;
-    const sample = arr[0];
-    return sample && ('nombre_doc' in sample || 'mat_doc' in sample);
-  };
-  
-  if (isPlaneacion(arr1) && isDocente(arr2)) return [arr1, arr2];
-  if (isPlaneacion(arr2) && isDocente(arr1)) return [arr2, arr1];
-  return [null, null];
-}
-
-function cargarArchivoManual(input) {
-  const file = input.files[0];
-  if (!file) return;
-  if (!file.name.endsWith('.json')) {
-    toast('El archivo debe ser .json', 'error');
-    return;
-  }
-  
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const content = e.target.result;
+      return response.text();
+    })
+    .then(content => {
       const [datos, docentePlanea] = parsearDosJSONs(content);
       CUMPLIMIENTO = construirCumplimiento(datos, docentePlanea);
       filtrado = [...CUMPLIMIENTO];
       
-      document.getElementById('uploadScreen').classList.add('hidden');
-      document.getElementById('dashboardScreen').classList.remove('hidden');
-      document.getElementById('btnExport').classList.remove('hidden');
+      document.getElementById('dashboard-screen').classList.remove('hidden');
+      document.getElementById('btn-export').classList.remove('hidden');
+      document.getElementById('badge-archivo').classList.remove('hidden');
+      document.getElementById('badge-archivo').textContent = '🔗 ' + GITHUB_DATA_URL;
       
       poblarFiltros();
       aplicarFiltros();
-      toast(`✅ Datos cargados: ${CUMPLIMIENTO.length} registros`, 'ok');
-    } catch(err) {
-      toast('Error al procesar: ' + err.message, 'error');
-    }
-  };
-  reader.readAsText(file, 'utf-8');
-  input.value = '';
+      toast('✓ Datos cargados desde GitHub: ' + CUMPLIMIENTO.length + ' registros', 'ok');
+    })
+    .catch(err => {
+      console.error(err);
+      toast('Error al procesar el archivo remoto: ' + err.message, 'error');
+    });
 }
 
+// Parse two concatenated JSON arrays from a single string
 function parsearDosJSONs(text) {
   let depth = 0;
   let inStr = false;
+  let escape = false;
   let firstEnd = -1;
-  
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
+    if (escape) { escape = false; continue; }
     if (ch === '"') { inStr = !inStr; continue; }
     if (inStr) continue;
-    if (ch === '[') depth++;
-    else if (ch === ']') {
+    if (ch === '[' || ch === '{') depth++;
+    else if (ch === ']' || ch === '}') {
       depth--;
       if (depth === 0) { firstEnd = i; break; }
     }
   }
-  
   if (firstEnd === -1) throw new Error('No se encontró el primer JSON');
-  
   const json1 = text.slice(0, firstEnd + 1);
   let json2 = text.slice(firstEnd + 1).trim();
-  while (json2.length > 0 && (json2[0] === ',' || json2[0] === ' ' || json2[0] === '\n')) {
+  
+  while (json2.length > 0 && (json2[0] === ',' || json2[0] === ' ' || json2[0] === '\n' || json2[0] === '\r')) {
     json2 = json2.slice(1);
   }
   
+  if (!json2) throw new Error('Solo se encontró un JSON; se esperaban dos arrays');
+
   const obj1 = JSON.parse(json1);
   const obj2 = JSON.parse(json2);
-  
-  const [datos, docentePlanea] = identificarArrays(obj1, obj2);
-  if (!datos || !docentePlanea) {
-    throw new Error('No se pudieron identificar los arrays');
-  }
-  
+
+  let datos, docentePlanea;
+  const sample1 = Array.isArray(obj1) && obj1.length > 0 ? obj1[0] : null;
+  const sample2 = Array.isArray(obj2) && obj2.length > 0 ? obj2[0] : null;
+
+  if (sample1 && ('Estatus' in sample1 || 'estatus' in sample1)) { datos = obj1; docentePlanea = obj2; }
+  else if (sample2 && ('Estatus' in sample2 || 'estatus' in sample2)) { datos = obj2; docentePlanea = obj1; }
+  else if (sample1 && ('mat_doc' in sample1 || 'nombre_doc' in sample1)) { docentePlanea = obj1; datos = obj2; }
+  else if (sample2 && ('mat_doc' in sample2 || 'nombre_doc' in sample2)) { docentePlanea = obj2; datos = obj1; }
+  else if (sample1 && ('matricula' in sample1 || 'idMateria' in sample1)) { datos = obj1; docentePlanea = obj2; }
+  else if (sample2 && ('matricula' in sample2 || 'idMateria' in sample2)) { datos = obj2; docentePlanea = obj1; }
+  else throw new Error('No se pudo identificar cuál array es datos y cuál es DocentesPlanea');
+
   return [datos, docentePlanea];
 }
 
 function construirCumplimiento(datos, docentePlanea) {
   const delivered = new Set();
   for (const r of datos) {
-    const matricula = r.matricula || r.MATRICULA;
-    const idMateria = r.idMateria || r.IDMATERIA;
-    const parcial = r.parcial || r.PARCIAL;
+    const matricula = r.matricula || r.mat_doc || r.Matricula || r.MATRICULA;
+    const idMateria = r.idMateria || r.cve_materia || r.IdMateria || r.IDMATERIA;
+    const parcial = r.parcial || r.Parcial || r.PARCIAL;
     if (matricula && idMateria && parcial) {
       delivered.add(`${matricula}|${idMateria}|${parcial}`);
     }
@@ -500,26 +302,27 @@ function construirCumplimiento(datos, docentePlanea) {
   
   const result = [];
   for (const r of docentePlanea) {
-    const nombre = r.nombre_doc || r.NOMBRE_DOC || r.docente || '';
-    const mat = r.mat_doc || r.MAT_DOC || r.matricula || '';
+    const nombre = r.nombre_doc || r.NOMBRE_DOC || r.nombre || r.Nombre || '';
+    const mat = r.mat_doc || r.MAT_DOC || r.matricula || r.Matricula || '';
     const plantel = r.plantel || r.PLANTEL || '';
+    const noPlantel = r.no_plantel || r.NO_PLANTEL || r.numero_plantel || '';
     const materia = r.materia || r.MATERIA || '';
-    const cveMateria = r.cve_materia || r.CVE_MATERIA || r.idMateria || '';
-    const semestre = parseInt(r.semestre || r.SEMESTRE || 0);
-    let turno = r.turno || r.TURNO || '';
-    if (turno === 1) turno = 'Mat';
-    if (turno === 2) turno = 'Vesp';
+    const cveMateria = r.cve_materia || r.CVE_MATERIA || r.idMateria || r.IdMateria || '';
+    const semestre = r.semestre || r.SEMESTRE || 0;
+    let turno = r.turno || r.TURNO || 0;
+    turno = parseInt(turno) || 0;
     
     if (!mat || !cveMateria) continue;
     
     for (const p of [1, 2, 3]) {
       result.push({
         plantel: String(plantel).trim(),
-        nombre_doc: String(nombre).trim().replace(/\s+/g, ' '),
+        no_plantel: noPlantel,
+        nombre_doc: String(nombre).trim(),
         mat_doc: String(mat),
         materia: String(materia).trim(),
         cve_materia: String(cveMateria),
-        semestre: semestre,
+        semestre: parseInt(semestre) || 0,
         turno: turno,
         parcial: p,
         cumple: delivered.has(`${mat}|${cveMateria}|${p}`) ? 1 : 0
@@ -529,31 +332,35 @@ function construirCumplimiento(datos, docentePlanea) {
   return result;
 }
 
+// ---- FILTERS ----
 function poblarFiltros() {
   const planteles = [...new Set(CUMPLIMIENTO.map(r=>r.plantel))].filter(p => p).sort();
   const semestres = [...new Set(CUMPLIMIENTO.map(r=>r.semestre))].filter(s => s).sort((a,b)=>a-b);
-  
-  const fp = document.getElementById('fPlantel');
+
+  const fp = document.getElementById('f-plantel');
   fp.innerHTML = '<option value="">Todos</option>';
-  planteles.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; fp.appendChild(o); });
-  
-  const fs = document.getElementById('fSemestre');
+  planteles.forEach(p=>{ const o=document.createElement('option'); o.value=p; o.textContent=p; fp.appendChild(o); });
+
+  const fs = document.getElementById('f-semestre');
   fs.innerHTML = '<option value="">Todos</option>';
-  semestres.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s+'° Sem'; fs.appendChild(o); });
+  semestres.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s+'° Sem'; fs.appendChild(o); });
+
+  document.getElementById('f-turno').value = '';
+  document.getElementById('f-parcial').value = '';
+  document.getElementById('f-docente').value = '';
 }
 
 function aplicarFiltros() {
   if (!CUMPLIMIENTO.length) return;
-  const plantel = document.getElementById('fPlantel').value;
-  const sem = document.getElementById('fSemestre').value;
-  const turno = document.getElementById('fTurno').value;
-  const parcial = document.getElementById('fParcial').value;
-  const busq = document.getElementById('fDocente').value.trim().toUpperCase();
-  
+  const plantel = document.getElementById('f-plantel').value;
+  const sem = document.getElementById('f-semestre').value;
+  const turno = document.getElementById('f-turno').value;
+  const parcial = document.getElementById('f-parcial').value;
+  const busq = document.getElementById('f-docente').value.trim().toUpperCase();
   filtrado = CUMPLIMIENTO.filter(r => {
     if (plantel && r.plantel !== plantel) return false;
     if (sem && r.semestre != sem) return false;
-    if (turno && r.turno !== turno) return false;
+    if (turno && r.turno != turno) return false;
     if (parcial && r.parcial != parcial) return false;
     if (busq && !r.nombre_doc.toUpperCase().includes(busq)) return false;
     return true;
@@ -563,173 +370,154 @@ function aplicarFiltros() {
   actualizarTablas();
 }
 
+// ---- KPIs ----
 function actualizarKPIs() {
   const total = filtrado.length;
   const cumple = filtrado.reduce((s,r)=>s+r.cumple,0);
-  const pct = total>0 ? (cumple/total*100).toFixed(1) : 0;
-  
-  document.getElementById('kpiOblig').textContent = total.toLocaleString('es-MX');
-  document.getElementById('kpiCumple').textContent = cumple.toLocaleString('es-MX');
-  document.getElementById('kpiPct').textContent = pct+'%';
-  document.getElementById('kpiFalta').textContent = (total-cumple).toLocaleString('es-MX');
-  
-  const dmap = {};
-  filtrado.forEach(r => {
-    if (!dmap[r.mat_doc]) dmap[r.mat_doc] = { exp: 0, cum: 0 };
-    dmap[r.mat_doc].exp++;
-    dmap[r.mat_doc].cum += r.cumple;
-  });
-  const docs = Object.values(dmap);
-  document.getElementById('kpiDocentes').textContent = docs.length;
-  document.getElementById('kpi100').textContent = docs.filter(d => d.cum === d.exp).length;
-  document.getElementById('kpiParcial').textContent = docs.filter(d => d.cum > 0 && d.cum < d.exp).length;
-  document.getElementById('kpiCero').textContent = docs.filter(d => d.cum === 0).length;
+  const pct = total>0?(cumple/total*100).toFixed(1):0;
+  document.getElementById('kpi-oblig').textContent = total.toLocaleString('es-MX');
+  document.getElementById('kpi-cumple').textContent = cumple.toLocaleString('es-MX');
+  document.getElementById('kpi-pct').textContent = pct+'%';
+  document.getElementById('kpi-falta').textContent = (total-cumple).toLocaleString('es-MX');
+  const dmap={};
+  filtrado.forEach(r=>{ if(!dmap[r.mat_doc]) dmap[r.mat_doc]={exp:0,cum:0}; dmap[r.mat_doc].exp++; dmap[r.mat_doc].cum+=r.cumple; });
+  const docs=Object.values(dmap);
+  document.getElementById('kpi-docentes').textContent = docs.length;
+  document.getElementById('kpi-100').textContent = docs.filter(d=>d.cum===d.exp).length;
+  document.getElementById('kpi-parcial').textContent = docs.filter(d=>d.cum>0&&d.cum<d.exp).length;
+  document.getElementById('kpi-cero').textContent = docs.filter(d=>d.cum===0).length;
 }
 
+// ---- CHARTS ----
 function actualizarGraficos() {
-  // Gráfico por parcial
-  const pm = {};
-  filtrado.forEach(r => {
-    if (!pm[r.parcial]) pm[r.parcial] = { exp: 0, cum: 0 };
-    pm[r.parcial].exp++;
-    pm[r.parcial].cum += r.cumple;
-  });
-  const pars = Object.keys(pm).sort();
-  if (pars.length) {
-    Plotly.react('chartParcial', [{
-      type: 'bar', x: pars.map(p => 'Parcial ' + p), y: pars.map(p => +(pm[p].cum / pm[p].exp * 100).toFixed(1)),
-      marker: { color: ['#3b82f6', '#10b981', '#f59e0b'], opacity: 0.9 },
-      text: pars.map(p => (pm[p].cum / pm[p].exp * 100).toFixed(1) + '%'), textposition: 'outside',
-      textfont: { color: '#e2e8f0', size: 12 }, hovertemplate: '%{x}: %{y:.1f}%<extra></extra>'
-    }], { paper_bgcolor: 'transparent', plot_bgcolor: 'transparent', font: { color: '#94a3b8' },
-      xaxis: { gridcolor: '#2e3450' }, yaxis: { gridcolor: '#2e3450', range: [0, 108], ticksuffix: '%' },
-      margin: { t: 10, b: 30, l: 50, r: 20 }, bargap: 0.4 }, { responsive: true, displayModeBar: false });
-  }
-  
-  // Gráfico de distribución
-  const dmap = {};
-  filtrado.forEach(r => {
-    if (!dmap[r.mat_doc]) dmap[r.mat_doc] = { exp: 0, cum: 0 };
-    dmap[r.mat_doc].exp++;
-    dmap[r.mat_doc].cum += r.cumple;
-  });
-  const docs = Object.values(dmap);
-  const dl = ['100%', '66–99%', '33–65%', '1–32%', '0%'];
-  const dv = [
-    docs.filter(d => d.cum === d.exp).length,
-    docs.filter(d => { const p = d.cum / d.exp * 100; return p >= 66 && p < 100; }).length,
-    docs.filter(d => { const p = d.cum / d.exp * 100; return p >= 33 && p < 66; }).length,
-    docs.filter(d => { const p = d.cum / d.exp * 100; return p > 0 && p < 33; }).length,
-    docs.filter(d => d.cum === 0).length
+  const pm={};
+  filtrado.forEach(r=>{ if(!pm[r.parcial]) pm[r.parcial]={exp:0,cum:0}; pm[r.parcial].exp++; pm[r.parcial].cum+=r.cumple; });
+  const pars=Object.keys(pm).sort();
+  if (pars.length === 0) return;
+  Plotly.react('chart-parcial',[{
+    type:'bar', x:pars.map(p=>'Parcial '+p), y:pars.map(p=>+(pm[p].cum/pm[p].exp*100).toFixed(1)),
+    marker:{color:['#3b82f6','#10b981','#f59e0b'],opacity:0.9},
+    text:pars.map(p=>(pm[p].cum/pm[p].exp*100).toFixed(1)+'%'), textposition:'outside',
+    textfont:{color:'#e2e8f0',size:12,family:'IBM Plex Mono'},
+    hovertemplate:'%{x}: %{y:.1f}%<extra></extra>'
+  }],{paper_bgcolor:'transparent',plot_bgcolor:'transparent',font:{color:'#94a3b8',family:'IBM Plex Sans'},
+    xaxis:{gridcolor:'#2e3450',zeroline:false},yaxis:{gridcolor:'#2e3450',zeroline:false,range:[0,108],ticksuffix:'%'},
+    margin:{t:10,b:30,l:50,r:20},bargap:0.4},{responsive:true,displayModeBar:false});
+
+  const dmap={};
+  filtrado.forEach(r=>{ if(!dmap[r.mat_doc]) dmap[r.mat_doc]={exp:0,cum:0}; dmap[r.mat_doc].exp++; dmap[r.mat_doc].cum+=r.cumple; });
+  const docs=Object.values(dmap);
+  const dl=['100%','66–99%','33–65%','1–32%','0%'];
+  const dv=[
+    docs.filter(d=>d.cum===d.exp).length,
+    docs.filter(d=>{const p=d.cum/d.exp*100;return p>=66&&p<100;}).length,
+    docs.filter(d=>{const p=d.cum/d.exp*100;return p>=33&&p<66;}).length,
+    docs.filter(d=>{const p=d.cum/d.exp*100;return p>0&&p<33;}).length,
+    docs.filter(d=>d.cum===0).length
   ];
-  Plotly.react('chartDist', [{
-    type: 'pie', labels: dl, values: dv, marker: { colors: ['#10b981', '#3b82f6', '#f59e0b', '#f97316', '#ef4444'] },
-    hole: 0.55, textinfo: 'label+value', textfont: { color: '#e2e8f0', size: 11 },
-    hovertemplate: '%{label}: %{value} docentes (%{percent})<extra></extra>'
-  }], { paper_bgcolor: 'transparent', plot_bgcolor: 'transparent', font: { color: '#94a3b8' }, showlegend: false, margin: { t: 10, b: 10, l: 20, r: 20 } }, { responsive: true, displayModeBar: false });
-  
-  // Gráfico por plantel
-  const plm = {};
-  filtrado.forEach(r => {
-    if (!plm[r.plantel]) plm[r.plantel] = { exp: 0, cum: 0 };
-    plm[r.plantel].exp++;
-    plm[r.plantel].cum += r.cumple;
-  });
-  const plist = Object.entries(plm).map(([n, v]) => ({ n, pct: v.cum / v.exp * 100 })).sort((a, b) => a.pct - b.pct);
+  Plotly.react('chart-dist',[{type:'pie',labels:dl,values:dv,marker:{colors:['#10b981','#3b82f6','#f59e0b','#f97316','#ef4444']},
+    hole:0.55,textinfo:'label+value',textfont:{color:'#e2e8f0',size:11},
+    hovertemplate:'%{label}: %{value} docentes (%{percent})<extra></extra>'}],
+    {paper_bgcolor:'transparent',plot_bgcolor:'transparent',font:{color:'#94a3b8',family:'IBM Plex Sans'},showlegend:false,margin:{t:10,b:10,l:20,r:20}},
+    {responsive:true,displayModeBar:false});
+
+  const plm={};
+  filtrado.forEach(r=>{ if(!plm[r.plantel]) plm[r.plantel]={exp:0,cum:0}; plm[r.plantel].exp++; plm[r.plantel].cum+=r.cumple; });
+  const plist=Object.entries(plm).map(([n,v])=>({n,pct:v.cum/v.exp*100})).sort((a,b)=>a.pct-b.pct);
   const chartHeight = Math.max(400, plist.length * 18 + 60);
-  Plotly.react('chartPlanteles', [{
-    type: 'bar', orientation: 'h', y: plist.map(p => p.n), x: plist.map(p => +p.pct.toFixed(1)),
-    marker: { color: plist.map(p => p.pct >= 80 ? '#10b981' : p.pct >= 60 ? '#3b82f6' : p.pct >= 40 ? '#f59e0b' : '#ef4444'), opacity: 0.9 },
-    text: plist.map(p => p.pct.toFixed(1) + '%'), textposition: 'outside', textfont: { color: '#e2e8f0', size: 10 },
-    hovertemplate: '%{y}: %{x:.1f}%<extra></extra>'
-  }], { paper_bgcolor: 'transparent', plot_bgcolor: 'transparent', font: { color: '#94a3b8', size: 10 },
-    xaxis: { gridcolor: '#2e3450', range: [0, 110], ticksuffix: '%' }, yaxis: { gridcolor: 'transparent', automargin: true },
-    margin: { t: 10, b: 30, l: 230, r: 70 }, bargap: 0.25, height: chartHeight }, { responsive: true, displayModeBar: false });
+  Plotly.react('chart-planteles-bar',[{
+    type:'bar',orientation:'h',y:plist.map(p=>p.n),x:plist.map(p=>+p.pct.toFixed(1)),
+    marker:{color:plist.map(p=>p.pct>=80?'#10b981':p.pct>=60?'#3b82f6':p.pct>=40?'#f59e0b':'#ef4444'),opacity:0.9},
+    text:plist.map(p=>p.pct.toFixed(1)+'%'),textposition:'outside',textfont:{color:'#e2e8f0',size:10},
+    hovertemplate:'%{y}: %{x:.1f}%<extra></extra>'
+  }],{paper_bgcolor:'transparent',plot_bgcolor:'transparent',font:{color:'#94a3b8',family:'IBM Plex Sans',size:10},
+    xaxis:{gridcolor:'#2e3450',zeroline:false,range:[0,110],ticksuffix:'%'},
+    yaxis:{gridcolor:'transparent',zeroline:false,automargin:true},
+    margin:{t:10,b:30,l:230,r:70},bargap:0.25,
+    height:chartHeight},{responsive:true,displayModeBar:false});
 }
 
-function pctClass(pct) {
-  return pct === 100 ? 'pct-100' : pct >= 66 ? 'pct-high' : pct >= 40 ? 'pct-mid' : pct > 0 ? 'pct-low' : 'pct-zero';
-}
+// ---- TABLES ----
+function pctColor(pct){return pct===100?'#10b981':pct>=66?'#3b82f6':pct>=40?'#f59e0b':pct>0?'#f97316':'#6b7280';}
+function pctClass(pct){return pct===100?'pct-100':pct>=66?'pct-high':pct>=40?'pct-mid':pct>0?'pct-low':'pct-zero';}
 
 function actualizarTablas() {
-  // Tabla planteles
-  const plm = {};
-  filtrado.forEach(r => {
-    if (!plm[r.plantel]) plm[r.plantel] = { plantel: r.plantel, exp: 0, cum: 0 };
-    plm[r.plantel].exp++;
-    plm[r.plantel].cum += r.cumple;
-  });
-  const plist = Object.values(plm).sort((a, b) => b.cum / b.exp - a.cum / a.exp);
-  document.getElementById('tblPlanteles').innerHTML = plist.map((p, i) => {
-    const pct = p.cum / p.exp * 100;
+  const plm={};
+  filtrado.forEach(r=>{ if(!plm[r.plantel]) plm[r.plantel]={plantel:r.plantel,exp:0,cum:0}; plm[r.plantel].exp++; plm[r.plantel].cum+=r.cumple; });
+  const plist=Object.values(plm).sort((a,b)=>b.cum/b.exp-a.cum/a.exp);
+  document.getElementById('tbl-planteles-body').innerHTML=plist.map((p,i)=>{
+    const pct=p.cum/p.exp*100;
     return `<tr><td class="mono text-slate-500">${i+1}</td><td class="font-semibold">${p.plantel}</td>
       <td class="mono">${p.exp}</td><td class="mono text-emerald-400">${p.cum}</td>
-      <td class="mono text-red-400">${p.exp - p.cum}</td>
+      <td class="mono text-red-400">${p.exp-p.cum}</td>
       <td><span class="mono font-bold ${pctClass(pct)}">${pct.toFixed(1)}%</span>
-        <div class="bar-wrap" style="width:90px"><div class="bar-fill" style="width:${Math.min(100, pct)}%;background:${pct >= 80 ? '#10b981' : pct >= 60 ? '#3b82f6' : pct >= 40 ? '#f59e0b' : '#ef4444'}"></div></div>
+        <div class="bar-wrap" style="width:90px"><div class="bar-fill" style="width:${Math.min(100,pct).toFixed(0)}%;background:${pctColor(pct)}"></div></div>
       </td></tr>`;
   }).join('');
-  
-  // Tabla docentes
-  const dmap = {};
-  filtrado.forEach(r => {
-    if (!dmap[r.mat_doc]) dmap[r.mat_doc] = { nombre: r.nombre_doc, plantel: r.plantel, mat_doc: r.mat_doc, exp: 0, cum: 0 };
-    dmap[r.mat_doc].exp++;
-    dmap[r.mat_doc].cum += r.cumple;
-  });
-  const dlist = Object.values(dmap).sort((a, b) => b.cum / b.exp - a.cum / a.exp);
-  document.getElementById('docCountLabel').textContent = dlist.length + ' docentes';
-  document.getElementById('tblDocentes').innerHTML = dlist.map(d => {
-    const pct = d.cum / d.exp * 100;
+
+  const dmap={};
+  filtrado.forEach(r=>{ if(!dmap[r.mat_doc]) dmap[r.mat_doc]={nombre:r.nombre_doc,plantel:r.plantel,mat_doc:r.mat_doc,exp:0,cum:0}; dmap[r.mat_doc].exp++; dmap[r.mat_doc].cum+=r.cumple; });
+  const dlist=Object.values(dmap).sort((a,b)=>b.cum/b.exp-a.cum/a.exp);
+  document.getElementById('doc-count-label').textContent=dlist.length+' docentes';
+  document.getElementById('tbl-docentes-body').innerHTML=dlist.map(d=>{
+    const pct=d.cum/d.exp*100;
     return `<tr><td class="mono text-slate-500">${d.mat_doc}</td><td class="font-semibold text-white">${d.nombre}</td>
       <td class="text-slate-400">${d.plantel}</td><td class="mono">${d.exp}</td>
-      <td class="mono text-emerald-400">${d.cum}</td><td class="mono text-red-400">${d.exp - d.cum}</td>
+      <td class="mono text-emerald-400">${d.cum}</td><td class="mono text-red-400">${d.exp-d.cum}</td>
       <td><span class="mono font-bold ${pctClass(pct)}">${pct.toFixed(1)}%</span>
-        <div class="bar-wrap" style="width:80px"><div class="bar-fill" style="width:${Math.min(100, pct)}%;background:${pct >= 80 ? '#10b981' : pct >= 60 ? '#3b82f6' : pct >= 40 ? '#f59e0b' : '#ef4444'}"></div></div>
+        <div class="bar-wrap" style="width:80px"><div class="bar-fill" style="width:${Math.min(100,pct).toFixed(0)}%;background:${pctColor(pct)}"></div></div>
       </td></tr>`;
   }).join('');
-  
-  // Tabla detalle
-  const slice = filtrado.slice(0, 2500);
-  document.getElementById('detCountLabel').textContent = filtrado.length + ' registros' + (filtrado.length > 2500 ? ' (mostrando primeros 2,500)' : '');
-  document.getElementById('tblDetalle').innerHTML = slice.map(r => {
-    const lbl = r.cumple ? '<span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981">✓ Entregada</span>' : '<span class="badge" style="background:rgba(239,68,68,0.15);color:#ef4444">✗ Faltante</span>';
+
+  const slice=filtrado.slice(0,2500);
+  document.getElementById('det-count-label').textContent=filtrado.length+' registros'+(filtrado.length>2500?' (mostrando primeros 2,500)':'');
+  document.getElementById('tbl-detalle-body').innerHTML=slice.map(r=>{
+    const lbl=r.cumple?'<span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981">✓ Entregada</span>':'<span class="badge" style="background:rgba(239,68,68,0.15);color:#ef4444">✗ Faltante</span>';
+    const t=r.turno===1?'Mat':r.turno===2?'Vesp':r.turno;
     return `<tr><td class="text-xs text-slate-400">${r.plantel}</td><td class="font-semibold">${r.nombre_doc}</td>
       <td class="text-xs text-slate-400">${r.materia}</td><td class="mono text-center">${r.semestre}</td>
-      <td class="mono text-center">${r.turno}</td><td class="mono text-center font-bold">${r.parcial}</td><td>${lbl}</td></tr>`;
+      <td class="mono text-center">${t}</td><td class="mono text-center font-bold">${r.parcial}</td><td>${lbl}</td></tr>`;
   }).join('');
 }
 
+// ---- TABS ----
 function showTab(name, btn) {
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-  document.getElementById('tab' + name.charAt(0).toUpperCase() + name.slice(1)).classList.remove('hidden');
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.add('hidden'));
+  document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.remove('hidden');
   btn.classList.add('active');
 }
 
+// ---- EXPORT ----
 function exportarCSV() {
-  const rows = [['Plantel', 'Docente', 'Matricula', 'Materia', 'Semestre', 'Turno', 'Parcial', 'Cumple']];
-  filtrado.forEach(r => {
-    rows.push([r.plantel, r.nombre_doc, r.mat_doc, r.materia, r.semestre, r.turno, r.parcial, r.cumple ? 'Sí' : 'No']);
+  const rows=[['Plantel','Docente','Matricula','Materia','Semestre','Turno','Parcial','Cumple']];
+  filtrado.forEach(r=>{
+    const t=r.turno===1?'Mat':r.turno===2?'Vesp':r.turno;
+    rows.push([r.plantel,r.nombre_doc,r.mat_doc,r.materia,r.semestre,t,r.parcial,r.cumple?'Sí':'No']);
   });
-  const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'cumplimiento_planeaciones.csv';
-  a.click();
+  const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='cumplimiento_planeaciones.csv'; a.click();
   URL.revokeObjectURL(url);
 }
 
+// ---- TOAST ----
 let toastTimer;
-function toast(msg, type = 'info') {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.style.borderColor = type === 'ok' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6';
+function toast(msg, type='info', isHtml = false) {
+  const el=document.getElementById('toast');
+  if (isHtml) {
+    el.innerHTML = msg;
+  } else {
+    el.textContent = msg;
+  }
+  el.style.borderColor=type==='ok'?'#10b981':type==='error'?'#ef4444':type==='loading'?'#3b82f6':'#3b82f6';
   el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 4000);
+  if (type !== 'loading') {
+    toastTimer=setTimeout(()=>el.classList.remove('show'), 3000);
+  }
+  return el;
 }
 </script>
 </body>
