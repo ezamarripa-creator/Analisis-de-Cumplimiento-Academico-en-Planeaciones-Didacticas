@@ -1,43 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-
-    <script>
-    (function() {
-        document.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
-            return false;
-        });
-      
-       document.addEventListener('keydown', function(e) {
-            const key = e.key.toLowerCase();
-            if ((e.ctrlKey && (key === 'u' || key === 's' || key === 'c' || key === 'i' || key === 'j')) ||
-                (e.ctrlKey && e.shiftKey && (key === 'i' || key === 'j' || key === 'c')) ||
-                e.key === 'F12') {
-                e.preventDefault();
-                return false;
-            }
-        });
-        
-        let devtoolsTriggered = false;
-        setInterval(function() {
-            if (devtoolsTriggered) return;
-            const before = new Date();
-            debugger; 
-            const after = new Date();
-            if (after - before > 100) { 
-                devtoolsTriggered = true;
-                document.body.innerHTML = '<div style="text-align:center; padding:50px; font-family:sans-serif;"><h1 style="color:#042C53;">⚠️ Acceso no autorizado</h1><p>El uso de herramientas de desarrollo no está permitido en este recurso institucional.</p><p style="font-size:14px; margin-top:30px;">🔒 COBAED · Dirección Académica</p></div>';
-            }
-        }, 2000);
-        
-        const style = document.createElement('style');
-        style.textContent = `body { user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; }`;
-        document.head.appendChild(style);
-    })();
-    </script>
-
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cumplimiento de Planeaciones - COBAED 2026B</title>
@@ -299,13 +262,20 @@ let filtrado = [];
 let DOCENTES_PLANEA_RAW = null;
 let DATOS_RAW = null;
 
-// Google Drive file ID (provided by user)
+// Google Drive file ID
 const GOOGLE_DRIVE_FILE_ID = "1fZAwogFPFrHgLwlzTwZoy4iX44MvGYx5";
-// Multiple endpoints for better compatibility
+
+// URLs para descargar el archivo público de Google Drive
+// Nota: Para archivos públicos, la URL directa funciona con CORS habilitado
 const DOWNLOAD_URLS = [
-  `https://drive.usercontent.google.com/download?id=${GOOGLE_DRIVE_FILE_ID}&export=download&confirm=t`,
+  // URL directa de descarga para archivos públicos (funciona con CORS)
   `https://drive.google.com/uc?export=download&id=${GOOGLE_DRIVE_FILE_ID}`,
-  `https://www.googleapis.com/drive/v3/files/${GOOGLE_DRIVE_FILE_ID}?alt=media&key=AIzaSyA0o1Jq3ZqEoKxXqLmN2oP3qR4sT5uV6wX7yZ8`
+  // URL alternativa con confirmación
+  `https://drive.usercontent.google.com/download?id=${GOOGLE_DRIVE_FILE_ID}&export=download&confirm=t`,
+  // Usando un proxy CORS gratuito como fallback
+  `https://cors-anywhere.herokuapp.com/https://drive.google.com/uc?export=download&id=${GOOGLE_DRIVE_FILE_ID}`,
+  // URL directa del contenido (a veces funciona)
+  `https://drive.google.com/uc?export=view&id=${GOOGLE_DRIVE_FILE_ID}`
 ];
 
 // ---- INITIAL LOAD FROM GOOGLE DRIVE ----
@@ -319,12 +289,11 @@ async function sincronizarDatos() {
   const syncText = document.getElementById('sync-text');
   const loadingOverlay = document.getElementById('loading-overlay');
   
-  // Show loading overlay only on initial load (when dashboard is hidden)
+  // Mostrar loading solo en carga inicial
   const dashboardVisible = !document.getElementById('dashboard-screen').classList.contains('hidden');
   if (!dashboardVisible) {
     loadingOverlay.classList.remove('hidden');
   } else {
-    // Just show sync indicator
     refreshBtn.classList.add('refreshing');
     syncDot.classList.add('syncing');
     syncText.textContent = 'Sincronizando...';
@@ -334,41 +303,48 @@ async function sincronizarDatos() {
     let content = null;
     let lastError = null;
     
-    // Try each URL until one works
+    // Intentar cada URL hasta que funcione
     for (const url of DOWNLOAD_URLS) {
       try {
+        console.log(`Intentando descargar desde: ${url}`);
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000);
+        const timeoutId = setTimeout(() => controller.abort(), 25000);
         const response = await fetch(url, { 
           signal: controller.signal,
-          mode: 'cors',
-          cache: 'no-store' // Force fresh data
+          cache: 'no-store',
+          mode: 'cors'
         });
         clearTimeout(timeoutId);
         
         if (response.ok) {
-          content = await response.text();
-          // Check if we got actual JSON (not HTML error page)
-          if (content.trim().startsWith('[') || content.trim().startsWith('{')) {
+          const text = await response.text();
+          // Verificar que sea JSON válido, no HTML
+          if (text.trim().startsWith('[') || text.trim().startsWith('{')) {
+            content = text;
+            console.log(`Descarga exitosa desde: ${url}`);
             break;
+          } else {
+            console.warn(`Respuesta no es JSON desde: ${url}, primeros 100 chars: ${text.substring(0,100)}`);
           }
         }
       } catch (e) {
         lastError = e;
-        console.warn(`Failed with URL: ${url}`, e);
+        console.warn(`Error con URL: ${url}`, e.message);
       }
     }
     
     if (!content) {
-      throw new Error(lastError || 'No se pudo obtener el archivo desde Google Drive');
+      throw new Error(lastError || 'No se pudo obtener el archivo desde Google Drive. Verifica tu conexión a internet.');
     }
     
     procesarContenidoJSON(content, 'Google Drive');
     
     syncDot.classList.remove('syncing');
     syncDot.classList.add('sync-dot');
-    syncText.textContent = 'Sincronizado';
+    const now = new Date();
+    syncText.textContent = `Sinc. ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
     refreshBtn.classList.remove('refreshing');
+    syncDot.style.background = '#10b981';
     
     toast('✅ Datos sincronizados correctamente desde Google Drive', 'ok');
     
@@ -378,23 +354,25 @@ async function sincronizarDatos() {
     syncDot.style.background = '#ef4444';
     syncText.textContent = 'Error de sincronización';
     refreshBtn.classList.remove('refreshing');
-    toast('❌ Error al sincronizar: ' + err.message, 'error');
+    toast('❌ Error al sincronizar: ' + err.message + '. Verifica tu conexión a internet.', 'error');
     
-    // If no data is loaded yet, show error message in the upload screen
+    // Si no hay datos cargados, mostrar mensaje en la pantalla
     if (!CUMPLIMIENTO.length) {
-      const uploadZone = document.getElementById('upload-zone');
-      if (uploadZone) {
-        uploadZone.innerHTML = `
-          <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" fill="none" viewBox="0 0 24 24" stroke="#ef4444" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-          </svg>
-          <div class="text-center">
-            <div class="text-red-400 font-semibold text-lg">Error de conexión</div>
-            <div class="text-slate-400 text-sm mt-1">No se pudo sincronizar con Google Drive</div>
+      const uploadScreen = document.getElementById('upload-screen');
+      if (uploadScreen) {
+        uploadScreen.innerHTML = `
+          <div class="text-center p-8">
+            <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" fill="none" viewBox="0 0 24 24" stroke="#ef4444" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <div class="text-red-400 font-semibold text-lg mt-4">Error de conexión</div>
+            <div class="text-slate-400 text-sm mt-2">No se pudo sincronizar con Google Drive</div>
             <div class="text-slate-600 text-xs mt-3">Verifica tu conexión a internet y que el archivo sea público</div>
-            <button onclick="sincronizarDatos()" class="mt-4 px-4 py-2 bg-blue-600 rounded-lg text-sm">Reintentar</button>
+            <div class="text-slate-600 text-xs">ID del archivo: ${GOOGLE_DRIVE_FILE_ID}</div>
+            <button onclick="sincronizarDatos()" class="mt-4 px-4 py-2 bg-blue-600 rounded-lg text-sm hover:bg-blue-500 transition">Reintentar</button>
           </div>
         `;
+        uploadScreen.classList.remove('hidden');
       }
     }
   } finally {
@@ -403,58 +381,65 @@ async function sincronizarDatos() {
 }
 
 function procesarContenidoJSON(content, sourceName) {
-  const [datos, docentePlanea] = parsearDosJSONs(content);
-  DATOS_RAW = datos;
-  DOCENTES_PLANEA_RAW = docentePlanea;
-  CUMPLIMIENTO = construirCumplimiento(datos, docentePlanea);
-  filtrado = [...CUMPLIMIENTO];
-  
-  document.getElementById('dashboard-screen').classList.remove('hidden');
-  
-  // Hide upload screen if it exists
-  const uploadScreen = document.getElementById('upload-screen');
-  if (uploadScreen) {
-    uploadScreen.classList.add('hidden');
+  try {
+    const [datos, docentePlanea] = parsearDosJSONs(content);
+    DATOS_RAW = datos;
+    DOCENTES_PLANEA_RAW = docentePlanea;
+    CUMPLIMIENTO = construirCumplimiento(datos, docentePlanea);
+    filtrado = [...CUMPLIMIENTO];
+    
+    document.getElementById('dashboard-screen').classList.remove('hidden');
+    
+    // Ocultar pantalla de upload si existe
+    const uploadScreen = document.getElementById('upload-screen');
+    if (uploadScreen) {
+      uploadScreen.classList.add('hidden');
+    }
+    
+    document.getElementById('btn-export').classList.remove('hidden');
+    
+    poblarFiltros();
+    aplicarFiltros();
+    
+    console.log(`✅ Datos cargados: ${CUMPLIMIENTO.length} registros desde ${sourceName}`);
+    toast(`✅ Datos cargados: ${CUMPLIMIENTO.length} registros`, 'ok');
+    
+  } catch (err) {
+    console.error('Error procesando JSON:', err);
+    throw new Error('Error al procesar el archivo JSON: ' + err.message);
   }
-  
-  document.getElementById('btn-export').classList.remove('hidden');
-  
-  poblarFiltros();
-  aplicarFiltros();
-  
-  // Update last sync time
-  const syncText = document.getElementById('sync-text');
-  if (syncText && syncText.textContent !== 'Error de sincronización') {
-    const now = new Date();
-    syncText.textContent = `Sinc. ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-  }
-  
-  console.log(`✅ Datos cargados: ${CUMPLIMIENTO.length} registros desde ${sourceName}`);
 }
 
 // Parse two concatenated JSON arrays from a single string
 function parsearDosJSONs(text) {
-  // Find boundary between the two JSON arrays by tracking bracket depth
+  // Buscar el punto de separación entre los dos arrays JSON
   let depth = 0;
   let inStr = false;
-  let escape = false;
   let firstEnd = -1;
+  
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
-    if (escape) { escape = false; continue; }
-    if (ch === '"') { inStr = !inStr; continue; }
+    if (ch === '"') {
+      inStr = !inStr;
+      continue;
+    }
     if (inStr) continue;
     if (ch === '[' || ch === '{') depth++;
     else if (ch === ']' || ch === '}') {
       depth--;
-      if (depth === 0) { firstEnd = i; break; }
+      if (depth === 0) { 
+        firstEnd = i; 
+        break; 
+      }
     }
   }
+  
   if (firstEnd === -1) throw new Error('No se encontró el primer JSON');
+  
   const json1 = text.slice(0, firstEnd + 1);
   let json2 = text.slice(firstEnd + 1).trim();
   
-  // Remove any commas or separators between arrays
+  // Eliminar posibles separadores
   while (json2.length > 0 && (json2[0] === ',' || json2[0] === ' ' || json2[0] === '\n' || json2[0] === '\r')) {
     json2 = json2.slice(1);
   }
@@ -464,17 +449,15 @@ function parsearDosJSONs(text) {
   const obj1 = JSON.parse(json1);
   const obj2 = JSON.parse(json2);
 
-  // Identify which is datos and which is DocentesPlanea
+  // Identificar cuál array es cuál
   let datos, docentePlanea;
   const sample1 = Array.isArray(obj1) && obj1.length > 0 ? obj1[0] : null;
   const sample2 = Array.isArray(obj2) && obj2.length > 0 ? obj2[0] : null;
 
-  // Check for planeacion data keys (Estatus, #Planeacion, idPlantel, etc.)
   const isPlaneacionData = (obj) => {
     return obj && ('Estatus' in obj || 'estatus' in obj || '#Planeacion' in obj || 'idPlantel' in obj);
   };
   
-  // Check for docente/materia assignment keys
   const isDocentePlanea = (obj) => {
     return obj && (('mat_doc' in obj || 'nombre_doc' in obj) && ('cve_materia' in obj || 'materia' in obj));
   };
@@ -489,7 +472,7 @@ function parsearDosJSONs(text) {
 }
 
 function construirCumplimiento(datos, docentePlanea) {
-  // Build delivered set: (matricula, idMateria, parcial)
+  // Construir set de entregas
   const delivered = new Set();
   for (const r of datos) {
     const matricula = r.matricula || r.MATRICULA || r.mat_doc;
@@ -500,7 +483,7 @@ function construirCumplimiento(datos, docentePlanea) {
     }
   }
   
-  // Build cumplimiento
+  // Construir cumplimiento
   const result = [];
   for (const r of docentePlanea) {
     const nombre = r.nombre_doc || r.NOMBRE_DOC || r.docente || r.DOCENTE || '';
