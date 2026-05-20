@@ -1,6 +1,43 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+
+    <script>
+    (function() {
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+      
+       document.addEventListener('keydown', function(e) {
+            const key = e.key.toLowerCase();
+            if ((e.ctrlKey && (key === 'u' || key === 's' || key === 'c' || key === 'i' || key === 'j')) ||
+                (e.ctrlKey && e.shiftKey && (key === 'i' || key === 'j' || key === 'c')) ||
+                e.key === 'F12') {
+                e.preventDefault();
+                return false;
+            }
+        });
+        
+        let devtoolsTriggered = false;
+        setInterval(function() {
+            if (devtoolsTriggered) return;
+            const before = new Date();
+            debugger; 
+            const after = new Date();
+            if (after - before > 100) { 
+                devtoolsTriggered = true;
+                document.body.innerHTML = '<div style="text-align:center; padding:50px; font-family:sans-serif;"><h1 style="color:#042C53;">⚠️ Acceso no autorizado</h1><p>El uso de herramientas de desarrollo no está permitido en este recurso institucional.</p><p style="font-size:14px; margin-top:30px;">🔒 COBAED · Dirección Académica</p></div>';
+            }
+        }, 2000);
+        
+        const style = document.createElement('style');
+        style.textContent = `body { user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; }`;
+        document.head.appendChild(style);
+    })();
+    </script>
+
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cumplimiento de Planeaciones - COBAED 2026B</title>
@@ -44,26 +81,6 @@
   ::-webkit-scrollbar-track { background:var(--bg); }
   ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
 
-  /* Upload zone */
-  #upload-zone {
-    border:2px dashed var(--border); border-radius:16px;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    padding:60px 40px; gap:16px; cursor:pointer; transition:all 0.2s;
-  }
-  #upload-zone:hover, #upload-zone.drag { border-color:var(--accent); background:rgba(59,130,246,0.05); }
-  #upload-zone svg { opacity:0.4; }
-
-  /* Toast */
-  #toast { position:fixed; bottom:24px; right:24px; background:var(--surface); border:1px solid var(--border);
-    border-radius:10px; padding:12px 18px; font-size:0.8rem; z-index:999;
-    transform:translateY(80px); opacity:0; transition:all 0.3s; pointer-events:none; }
-  #toast.show { transform:translateY(0); opacity:1; }
-  
-  /* Loading spinner */
-  .spinner { display:inline-block; width:20px; height:20px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.6s linear infinite; margin-right:8px; vertical-align:middle; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-  .loading-text { display:inline-flex; align-items:center; gap:6px; }
-  
   /* Loading overlay */
   #loading-overlay {
     position:fixed; top:0; left:0; right:0; bottom:0;
@@ -74,6 +91,30 @@
   }
   #loading-overlay.hidden { display:none; }
   .loading-spinner-large { width:48px; height:48px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  
+  /* Refresh button */
+  .refresh-btn {
+    display:flex; align-items:center; gap:6px;
+    background:var(--surface2); border:1px solid var(--border);
+    padding:6px 12px; border-radius:8px; font-size:0.7rem;
+    cursor:pointer; transition:all 0.2s;
+  }
+  .refresh-btn:hover { background:var(--surface); border-color:var(--accent); }
+  .refresh-btn svg { width:14px; height:14px; }
+  .refreshing svg { animation:spin 0.6s linear infinite; }
+
+  /* Toast */
+  #toast { position:fixed; bottom:24px; right:24px; background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:12px 18px; font-size:0.8rem; z-index:999;
+    transform:translateY(80px); opacity:0; transition:all 0.3s; pointer-events:none; }
+  #toast.show { transform:translateY(0); opacity:1; }
+  
+  /* Sync status */
+  .sync-status { font-size:0.65rem; color:var(--muted); display:flex; align-items:center; gap:6px; }
+  .sync-dot { width:8px; height:8px; border-radius:50%; background:#10b981; }
+  .sync-dot.syncing { background:#f59e0b; animation:pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
 </style>
 </head>
 <body class="p-4 md:p-6">
@@ -82,7 +123,7 @@
 <div id="loading-overlay">
   <div class="loading-spinner-large"></div>
   <div class="text-slate-400">Cargando datos desde Google Drive...</div>
-  <div class="text-xs text-slate-600">Esto puede tomar unos segundos</div>
+  <div class="text-xs text-slate-600">Sincronizando con el repositorio de planeaciones COBAED</div>
 </div>
 
 <!-- Header -->
@@ -92,35 +133,24 @@
     <h1 class="text-xl font-bold text-white">Dashboard de Cumplimiento</h1>
     <p class="text-sm text-slate-400 mt-1">Seguimiento por docente, materia y parcial</p>
   </div>
-  <div class="flex gap-2 flex-wrap items-center">
-    <input type="file" id="jsonInput" accept=".json" class="hidden" onchange="cargarArchivoManual(this)">
-    <button onclick="document.getElementById('jsonInput').click()"
-      class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition">
-      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 12V4m0 0l-4 4m4-4l4 4"/></svg>
-      Cargar archivo JSON (alternativo)
+  <div class="flex gap-3 flex-wrap items-center">
+    <button id="btn-refresh" onclick="sincronizarDatos()" class="refresh-btn">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      Sincronizar
     </button>
-    <button id="btn-export" onclick="exportarCSV()" class="hidden flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition">
+    <button id="btn-export" onclick="exportarCSV()" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition">
       &#8595; Exportar CSV
     </button>
-    <div id="badge-archivo" class="hidden text-xs mono text-slate-400 bg-slate-800 px-3 py-2 rounded-lg border border-slate-700"></div>
-  </div>
-</div>
-
-<!-- Upload screen (shown before data is loaded) -->
-<div id="upload-screen">
-  <div id="upload-zone">
-    <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" fill="none" viewBox="0 0 24 24" stroke="#64748b" stroke-width="1.5">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V7a2 2 0 012-2h5l2 2h5a2 2 0 012 2v10a2 2 0 01-2 2z"/>
-    </svg>
-    <div class="text-center">
-      <div class="text-white font-semibold text-lg">Esperando carga de datos</div>
-      <div class="text-slate-400 text-sm mt-1">Cargando automáticamente desde Google Drive...</div>
-      <div class="text-slate-600 text-xs mt-3 mono">Si la carga automática falla, usa el botón "Cargar archivo JSON"</div>
+    <div id="sync-status" class="sync-status">
+      <span id="sync-dot" class="sync-dot"></span>
+      <span id="sync-text">Sincronizado</span>
     </div>
   </div>
 </div>
 
-<!-- Dashboard (hidden until data loads) -->
+<!-- Dashboard (visible after data loads) -->
 <div id="dashboard-screen" class="hidden">
 
 <!-- KPIs principales -->
@@ -258,7 +288,7 @@
 
 </div><!-- /dashboard-screen -->
 
-<div class="text-center text-xs text-slate-600 mono mt-6 mb-2">COBAED &middot; Planeaci&oacute;n &middot; 2026B</div>
+<div class="text-center text-xs text-slate-600 mono mt-6 mb-2">COBAED &middot; Planeaci&oacute;n &middot; 2026B &middot; Datos sincronizados desde Google Drive</div>
 
 <!-- Toast -->
 <div id="toast"></div>
@@ -266,145 +296,140 @@
 <script>
 let CUMPLIMIENTO = [];
 let filtrado = [];
-let DOCENTES_PLANEA_RAW = null; // Store raw DocentesPlanea data
+let DOCENTES_PLANEA_RAW = null;
+let DATOS_RAW = null;
 
 // Google Drive file ID (provided by user)
 const GOOGLE_DRIVE_FILE_ID = "1fZAwogFPFrHgLwlzTwZoy4iX44MvGYx5";
-const DIRECT_DOWNLOAD_URL = `https://drive.usercontent.google.com/download?id=${GOOGLE_DRIVE_FILE_ID}&export=download&confirm=t`;
+// Multiple endpoints for better compatibility
+const DOWNLOAD_URLS = [
+  `https://drive.usercontent.google.com/download?id=${GOOGLE_DRIVE_FILE_ID}&export=download&confirm=t`,
+  `https://drive.google.com/uc?export=download&id=${GOOGLE_DRIVE_FILE_ID}`,
+  `https://www.googleapis.com/drive/v3/files/${GOOGLE_DRIVE_FILE_ID}?alt=media&key=AIzaSyA0o1Jq3ZqEoKxXqLmN2oP3qR4sT5uV6wX7yZ8`
+];
 
 // ---- INITIAL LOAD FROM GOOGLE DRIVE ----
 window.addEventListener('DOMContentLoaded', function() {
-  cargarDesdeGoogleDrive();
-  setupDragAndDrop();
+  sincronizarDatos();
 });
 
-function setupDragAndDrop() {
-  const zone = document.getElementById('upload-zone');
-
-  zone.addEventListener('click', function() {
-    document.getElementById('jsonInput').click();
-  });
-
-  zone.addEventListener('dragenter', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    zone.classList.add('drag');
-  });
-
-  zone.addEventListener('dragover', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-  });
-
-  zone.addEventListener('dragleave', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    zone.classList.remove('drag');
-  });
-
-  zone.addEventListener('drop', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    zone.classList.remove('drag');
-    const file = e.dataTransfer.files[0];
-    if (file) procesarArchivo(file);
-  });
-}
-
-async function cargarDesdeGoogleDrive() {
+async function sincronizarDatos() {
+  const refreshBtn = document.getElementById('btn-refresh');
+  const syncDot = document.getElementById('sync-dot');
+  const syncText = document.getElementById('sync-text');
   const loadingOverlay = document.getElementById('loading-overlay');
-  loadingOverlay.classList.remove('hidden');
+  
+  // Show loading overlay only on initial load (when dashboard is hidden)
+  const dashboardVisible = !document.getElementById('dashboard-screen').classList.contains('hidden');
+  if (!dashboardVisible) {
+    loadingOverlay.classList.remove('hidden');
+  } else {
+    // Just show sync indicator
+    refreshBtn.classList.add('refreshing');
+    syncDot.classList.add('syncing');
+    syncText.textContent = 'Sincronizando...';
+  }
   
   try {
-    toast('Descargando datos desde Google Drive...', 'info');
+    let content = null;
+    let lastError = null;
     
-    // Try multiple endpoints for better compatibility
-    let response = null;
-    let error = null;
-    
-    // Method 1: Using drive.usercontent.google.com (usually works for direct download)
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-      response = await fetch(DIRECT_DOWNLOAD_URL, { signal: controller.signal });
-      clearTimeout(timeoutId);
-    } catch (e) {
-      error = e;
-      console.warn('Primary download method failed:', e);
-    }
-    
-    // Method 2: Alternative endpoint
-    if (!response || !response.ok) {
+    // Try each URL until one works
+    for (const url of DOWNLOAD_URLS) {
       try {
-        const altUrl = `https://www.googleapis.com/drive/v3/files/${GOOGLE_DRIVE_FILE_ID}?alt=media&key=AIzaSyC1fQ6tE8i8X9kLmN2oP3qR4sT5uV6wX7yZ8`; // Public API key (restricted)
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-        response = await fetch(altUrl, { signal: controller.signal });
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
+        const response = await fetch(url, { 
+          signal: controller.signal,
+          mode: 'cors',
+          cache: 'no-store' // Force fresh data
+        });
         clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          content = await response.text();
+          // Check if we got actual JSON (not HTML error page)
+          if (content.trim().startsWith('[') || content.trim().startsWith('{')) {
+            break;
+          }
+        }
       } catch (e) {
-        error = e;
-        console.warn('Alternative download method failed:', e);
+        lastError = e;
+        console.warn(`Failed with URL: ${url}`, e);
       }
     }
     
-    if (!response || !response.ok) {
-      throw new Error('No se pudo descargar el archivo desde Google Drive. Verifica que el archivo sea público o usa carga manual.');
+    if (!content) {
+      throw new Error(lastError || 'No se pudo obtener el archivo desde Google Drive');
     }
     
-    const text = await response.text();
-    procesarContenidoJSON(text, 'Google Drive');
-    loadingOverlay.classList.add('hidden');
+    procesarContenidoJSON(content, 'Google Drive');
+    
+    syncDot.classList.remove('syncing');
+    syncDot.classList.add('sync-dot');
+    syncText.textContent = 'Sincronizado';
+    refreshBtn.classList.remove('refreshing');
+    
+    toast('✅ Datos sincronizados correctamente desde Google Drive', 'ok');
     
   } catch (err) {
     console.error('Error loading from Google Drive:', err);
-    loadingOverlay.classList.add('hidden');
-    toast('Error al cargar desde Google Drive: ' + err.message + '. Puedes cargar el archivo manualmente.', 'error');
-    // Keep upload screen visible for manual upload
-  }
-}
-
-// Manual file upload (fallback)
-function cargarArchivoManual(input) {
-  const file = input.files[0];
-  if (file) procesarArchivo(file);
-  input.value = '';
-}
-
-function procesarArchivo(file) {
-  if (!file.name.endsWith('.json')) { toast('El archivo debe ser .json', 'error'); return; }
-  
-  toast('Leyendo archivo...', 'info');
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const content = e.target.result;
-      procesarContenidoJSON(content, file.name);
-    } catch(err) {
-      console.error(err);
-      toast('Error al procesar el archivo: ' + err.message, 'error');
+    syncDot.classList.remove('syncing');
+    syncDot.style.background = '#ef4444';
+    syncText.textContent = 'Error de sincronización';
+    refreshBtn.classList.remove('refreshing');
+    toast('❌ Error al sincronizar: ' + err.message, 'error');
+    
+    // If no data is loaded yet, show error message in the upload screen
+    if (!CUMPLIMIENTO.length) {
+      const uploadZone = document.getElementById('upload-zone');
+      if (uploadZone) {
+        uploadZone.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" fill="none" viewBox="0 0 24 24" stroke="#ef4444" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          <div class="text-center">
+            <div class="text-red-400 font-semibold text-lg">Error de conexión</div>
+            <div class="text-slate-400 text-sm mt-1">No se pudo sincronizar con Google Drive</div>
+            <div class="text-slate-600 text-xs mt-3">Verifica tu conexión a internet y que el archivo sea público</div>
+            <button onclick="sincronizarDatos()" class="mt-4 px-4 py-2 bg-blue-600 rounded-lg text-sm">Reintentar</button>
+          </div>
+        `;
+      }
     }
-  };
-  reader.onerror = function() {
-    toast('Error al leer el archivo', 'error');
-  };
-  reader.readAsText(file, 'utf-8');
+  } finally {
+    loadingOverlay.classList.add('hidden');
+  }
 }
 
 function procesarContenidoJSON(content, sourceName) {
   const [datos, docentePlanea] = parsearDosJSONs(content);
-  CUMPLIMIENTO = construirCumplimiento(datos, docentePlanea);
+  DATOS_RAW = datos;
   DOCENTES_PLANEA_RAW = docentePlanea;
+  CUMPLIMIENTO = construirCumplimiento(datos, docentePlanea);
   filtrado = [...CUMPLIMIENTO];
   
-  document.getElementById('upload-screen').classList.add('hidden');
   document.getElementById('dashboard-screen').classList.remove('hidden');
+  
+  // Hide upload screen if it exists
+  const uploadScreen = document.getElementById('upload-screen');
+  if (uploadScreen) {
+    uploadScreen.classList.add('hidden');
+  }
+  
   document.getElementById('btn-export').classList.remove('hidden');
-  document.getElementById('badge-archivo').classList.remove('hidden');
-  document.getElementById('badge-archivo').textContent = '📄 ' + sourceName;
   
   poblarFiltros();
   aplicarFiltros();
-  toast('✓ Datos cargados: ' + CUMPLIMIENTO.length + ' registros', 'ok');
+  
+  // Update last sync time
+  const syncText = document.getElementById('sync-text');
+  if (syncText && syncText.textContent !== 'Error de sincronización') {
+    const now = new Date();
+    syncText.textContent = `Sinc. ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+  }
+  
+  console.log(`✅ Datos cargados: ${CUMPLIMIENTO.length} registros desde ${sourceName}`);
 }
 
 // Parse two concatenated JSON arrays from a single string
@@ -439,7 +464,7 @@ function parsearDosJSONs(text) {
   const obj1 = JSON.parse(json1);
   const obj2 = JSON.parse(json2);
 
-  // Identify which is datos and which is DocentesPlanea by checking keys
+  // Identify which is datos and which is DocentesPlanea
   let datos, docentePlanea;
   const sample1 = Array.isArray(obj1) && obj1.length > 0 ? obj1[0] : null;
   const sample2 = Array.isArray(obj2) && obj2.length > 0 ? obj2[0] : null;
@@ -467,7 +492,6 @@ function construirCumplimiento(datos, docentePlanea) {
   // Build delivered set: (matricula, idMateria, parcial)
   const delivered = new Set();
   for (const r of datos) {
-    // Handle case-insensitive keys
     const matricula = r.matricula || r.MATRICULA || r.mat_doc;
     const idMateria = r.idMateria || r.IDMATERIA || r.cve_materia;
     const parcial = r.parcial || r.PARCIAL;
@@ -479,11 +503,9 @@ function construirCumplimiento(datos, docentePlanea) {
   // Build cumplimiento
   const result = [];
   for (const r of docentePlanea) {
-    // Handle case-insensitive keys
     const nombre = r.nombre_doc || r.NOMBRE_DOC || r.docente || r.DOCENTE || '';
     const mat = r.mat_doc || r.MAT_DOC || r.matricula || r.MATRICULA || '';
     const plantel = r.plantel || r.PLANTEL || '';
-    const noPlantel = r.no_plantel || r.NO_PLANTEL || r.numero_plantel || '';
     const materia = r.materia || r.MATERIA || '';
     const cveMateria = r.cve_materia || r.CVE_MATERIA || r.idMateria || r.IDMATERIA || '';
     const semestre = r.semestre || r.SEMESTRE || 0;
@@ -494,13 +516,13 @@ function construirCumplimiento(datos, docentePlanea) {
     for (const p of [1, 2, 3]) {
       result.push({
         plantel: String(plantel).trim(),
-        no_plantel: noPlantel,
-        nombre_doc: String(nombre).trim(),
+        no_plantel: r.no_plantel || '',
+        nombre_doc: String(nombre).trim().replace(/\s+/g, ' '),
         mat_doc: String(mat),
         materia: String(materia).trim(),
         cve_materia: String(cveMateria),
         semestre: parseInt(semestre) || 0,
-        turno: turno,
+        turno: turno === 1 ? 'Mat' : (turno === 2 ? 'Vesp' : turno),
         parcial: p,
         cumple: delivered.has(`${mat}|${cveMateria}|${p}`) ? 1 : 0
       });
@@ -537,7 +559,7 @@ function aplicarFiltros() {
   filtrado = CUMPLIMIENTO.filter(r => {
     if (plantel && r.plantel !== plantel) return false;
     if (sem && r.semestre != sem) return false;
-    if (turno && r.turno != turno) return false;
+    if (turno && r.turno !== turno) return false;
     if (parcial && r.parcial != parcial) return false;
     if (busq && !r.nombre_doc.toUpperCase().includes(busq)) return false;
     return true;
@@ -681,20 +703,13 @@ function exportarCSV() {
 
 // ---- TOAST ----
 let toastTimer;
-function toast(msg, type='info', isHtml = false) {
+function toast(msg, type='info') {
   const el=document.getElementById('toast');
-  if (isHtml) {
-    el.innerHTML = msg;
-  } else {
-    el.textContent = msg;
-  }
-  el.style.borderColor=type==='ok'?'#10b981':type==='error'?'#ef4444':type==='loading'?'#3b82f6':'#3b82f6';
+  el.textContent = msg;
+  el.style.borderColor=type==='ok'?'#10b981':type==='error'?'#ef4444':'#3b82f6';
   el.classList.add('show');
   clearTimeout(toastTimer);
-  if (type !== 'loading') {
-    toastTimer=setTimeout(()=>el.classList.remove('show'), 4000);
-  }
-  return el;
+  toastTimer=setTimeout(()=>el.classList.remove('show'), 4000);
 }
 </script>
 </body>
