@@ -58,7 +58,7 @@
     </div>
   </header>
 
-  <section class="card grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+  <section class="card grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 items-end">
     <div>
       <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Plantel</label>
       <select id="f-plantel" onchange="procesar()" class="select-custom w-full rounded-lg p-2 text-sm"></select>
@@ -78,6 +78,14 @@
         <option value="1">1er Parcial</option>
         <option value="2">2do Parcial</option>
         <option value="3">3er Parcial</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Género</label>
+      <select id="f-genero" onchange="procesar()" class="select-custom w-full rounded-lg p-2 text-sm">
+        <option value="TODOS">Todos los géneros</option>
+        <option value="Masculino">Masculino</option>
+        <option value="Femenino">Femenino</option>
       </select>
     </div>
     <div>
@@ -177,7 +185,6 @@ let BD_APROBADAS = [];
 let BD_PLANTILLAS = [];
 let filtrado = [];
 
-// Cambiado el nombre del archivo para coincidir exactamente con el tuyo
 document.addEventListener("DOMContentLoaded", () => {
   fetch('datos + DocentePlanea.json')
     .then(response => {
@@ -201,7 +208,6 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function initApp() {
-  // Poblado dinámico controlando posibles valores nulos en el objeto 'plantel'
   const listPlanteles = [...new Set(BD_PLANTILLAS.map(x => x.plantel ? x.plantel.trim() : 'SIN PLANTEL'))].sort();
   const selectP = document.getElementById('f-plantel');
   let options = '<option value="TODOS">Todos los Planteles</option>';
@@ -219,13 +225,15 @@ function procesar() {
   const fPlantel = document.getElementById('f-plantel').value;
   const fSemestre = document.getElementById('f-semestre').value;
   const fParcial = parseInt(document.getElementById('f-parcial').value);
+  const fGenero = document.getElementById('f-genero').value;
   const fCumple = document.getElementById('f-cumple').value;
 
-  // Filtrado controlado para omitir o manejar nulos en el archivo masivo
+  // Filtrado controlado añadiendo la regla del filtro de Género
   let base = BD_PLANTILLAS.filter(p => {
     if (!p.plantel) return false; 
     if (fPlantel !== 'TODOS' && p.plantel.trim() !== fPlantel) return false;
     if (fSemestre !== 'TODOS' && p.semestre.toString() !== fSemestre) return false;
+    if (fGenero !== 'TODOS' && (!p.Genero || p.Genero.trim() !== fGenero)) return false;
     return true;
   });
 
@@ -235,7 +243,6 @@ function procesar() {
       turnoPlantilla = (turnoPlantilla === 1) ? 'Mat' : (turnoPlantilla === 2) ? 'Vesp' : turnoPlantilla;
     }
 
-    // Busqueda segura
     const match = BD_APROBADAS.find(a => 
       a.idPlantel === p.no_plantel &&
       a.matricula === p.mat_doc &&
@@ -253,12 +260,14 @@ function procesar() {
       semestre: p.semestre,
       turno: turnoPlantilla,
       parcial: fParcial,
+      genero: p.Genero ? p.Genero.trim() : 'No Especificado',
       cumple: !!match
     };
   });
 
   if (fCumple !== 'TODOS') {
     const buscaCumple = (fCumple === 'SI');
+    universo = universe => universo.filter(u => u.cumple === buscaCumple);
     universo = universo.filter(u => u.cumple === buscaCumple);
   }
 
@@ -339,7 +348,6 @@ function renderTabla() {
     return;
   }
 
-  // Despliegue seguro limitado a 500 filas en el DOM por velocidad
   tbody.innerHTML = filtrado.slice(0, 500).map(r => { 
     const lbl = r.cumple 
       ? '<span class="px-2 py-0.5 rounded text-xs font-semibold inline-flex items-center gap-1" style="background:rgba(16,185,129,0.15);color:#10b981">&#10004; Cumple</span>'
@@ -364,9 +372,9 @@ function showTab(name, btn) {
 }
 
 function exportarCSV() {
-  const rows = [['Plantel','Docente','Matricula','Materia','Semestre','Turno','Parcial','Cumple']];
+  const rows = [['Plantel','Docente','Matricula','Materia','Semestre','Turno','Parcial','Genero','Cumple']];
   filtrado.forEach(r => {
-    rows.push([r.plantel, r.nombre_doc, r.mat_doc, r.materia, r.semestre, r.turno, r.parcial, r.cumple ? 'SI' : 'NO']);
+    rows.push([r.plantel, r.nombre_doc, r.mat_doc, r.materia, r.semestre, r.turno, r.parcial, r.genero, r.cumple ? 'SI' : 'NO']);
   });
   
   const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.map(val => `"${val}"`).join(",")).join("\n");
