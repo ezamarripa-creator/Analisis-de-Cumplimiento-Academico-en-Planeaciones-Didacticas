@@ -186,11 +186,13 @@ let BD_PLANTILLAS = [];
 let filtrado = [];
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Se añade codificación de caracteres URL (%20) para evitar fallos de lectura en servidores GitHub
-  fetch('datos%20+%20DocentePlanea.json')
+  // Uso estricto de codificación de URI para que GitHub no rompa la URL por los espacios y el símbolo '+'
+  const archivoJson = encodeURIComponent("datos + DocentePlanea.json");
+  
+  fetch(archivoJson)
     .then(response => {
       if (!response.ok) {
-        throw new Error("No se pudo encontrar el archivo 'datos + DocentePlanea.json' en el repositorio.");
+        throw new Error("No se pudo mapear el archivo JSON. Verifica que esté en la raíz de la rama 'main' o 'gh-pages'.");
       }
       return response.json();
     })
@@ -204,7 +206,7 @@ document.addEventListener("DOMContentLoaded", () => {
     .catch(error => {
       console.error(error);
       const msg = document.querySelector('#loading-overlay p');
-      if (msg) msg.innerHTML = `<span class="text-red-500 font-bold">Error de carga en GitHub:</span><br>${error.message}`;
+      if (msg) msg.innerHTML = `<span class="text-red-500 font-bold">Error de carga en GitHub Pages:</span><br>${error.message}`;
     });
 });
 
@@ -370,7 +372,6 @@ function showTab(name, btn) {
   btn.classList.add('active');
 }
 
-// Exportación optimizada incluyendo el campo género
 function exportarCSV() {
   const rows = [['Plantel','Docente','Matricula','Materia','Semestre','Turno','Parcial','Genero','Cumple']];
   filtrado.forEach(r => {
