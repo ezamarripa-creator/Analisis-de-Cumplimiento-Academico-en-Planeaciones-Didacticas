@@ -186,10 +186,11 @@ let BD_PLANTILLAS = [];
 let filtrado = [];
 
 document.addEventListener("DOMContentLoaded", () => {
-  fetch('datos + DocentePlanea.json')
+  // Se añade codificación de caracteres URL (%20) para evitar fallos de lectura en servidores GitHub
+  fetch('datos%20+%20DocentePlanea.json')
     .then(response => {
       if (!response.ok) {
-        throw new Error("No se pudo encontrar el archivo 'datos + DocentePlanea.json' en esta carpeta.");
+        throw new Error("No se pudo encontrar el archivo 'datos + DocentePlanea.json' en el repositorio.");
       }
       return response.json();
     })
@@ -203,7 +204,7 @@ document.addEventListener("DOMContentLoaded", () => {
     .catch(error => {
       console.error(error);
       const msg = document.querySelector('#loading-overlay p');
-      if (msg) msg.innerHTML = `<span class="text-red-500 font-bold">Error de carga:</span><br>${error.message}`;
+      if (msg) msg.innerHTML = `<span class="text-red-500 font-bold">Error de carga en GitHub:</span><br>${error.message}`;
     });
 });
 
@@ -228,7 +229,6 @@ function procesar() {
   const fGenero = document.getElementById('f-genero').value;
   const fCumple = document.getElementById('f-cumple').value;
 
-  // Filtrado controlado añadiendo la regla del filtro de Género
   let base = BD_PLANTILLAS.filter(p => {
     if (!p.plantel) return false; 
     if (fPlantel !== 'TODOS' && p.plantel.trim() !== fPlantel) return false;
@@ -267,7 +267,6 @@ function procesar() {
 
   if (fCumple !== 'TODOS') {
     const buscaCumple = (fCumple === 'SI');
-    universo = universe => universo.filter(u => u.cumple === buscaCumple);
     universo = universo.filter(u => u.cumple === buscaCumple);
   }
 
@@ -371,6 +370,7 @@ function showTab(name, btn) {
   btn.classList.add('active');
 }
 
+// Exportación optimizada incluyendo el campo género
 function exportarCSV() {
   const rows = [['Plantel','Docente','Matricula','Materia','Semestre','Turno','Parcial','Genero','Cumple']];
   filtrado.forEach(r => {
