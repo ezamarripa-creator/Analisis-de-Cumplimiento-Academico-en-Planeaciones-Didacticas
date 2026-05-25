@@ -1,6 +1,43 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+
+    <script>
+    (function() {
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+      
+       document.addEventListener('keydown', function(e) {
+            const key = e.key.toLowerCase();
+            if ((e.ctrlKey && (key === 'u' || key === 's' || key === 'c' || key === 'i' || key === 'j')) ||
+                (e.ctrlKey && e.shiftKey && (key === 'i' || key === 'j' || key === 'c')) ||
+                e.key === 'F12') {
+                e.preventDefault();
+                return false;
+            }
+        });
+        
+        let devtoolsTriggered = false;
+        setInterval(function() {
+            if (devtoolsTriggered) return;
+            const before = new Date();
+            debugger; 
+            const after = new Date();
+            if (after - before > 100) { 
+                devtoolsTriggered = true;
+                document.body.innerHTML = '<div style="text-align:center; padding:50px; font-family:sans-serif;"><h1 style="color:#042C53;">⚠️ Acceso no autorizado</h1><p>El uso de herramientas de desarrollo no está permitido en este recurso institucional.</p><p style="font-size:14px; margin-top:30px;">🔒 COBAED · Dirección Académica</p></div>';
+            }
+        }, 2000);
+        
+        const style = document.createElement('style');
+        style.textContent = `body { user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; }`;
+        document.head.appendChild(style);
+    })();
+    </script>
+
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cumplimiento de Planeaciones - COBAED 2026B</title>
@@ -9,383 +46,670 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0f1117; --surface: #1a1f2e; --surface2: #242938;
-    --border: #2e3450; --accent: #3b82f6; --accent2: #10b981;
-    --danger: #ef4444; --warn: #f59e0b; --text: #e2e8f0; --muted: #64748b;
+    --bg:#0f1117; --surface:#1a1f2e; --surface2:#242938;
+    --border:#2e3450; --accent:#3b82f6; --accent2:#10b981;
+    --danger:#ef4444; --warn:#f59e0b; --text:#e2e8f0; --muted:#64748b;
   }
-  * { box-sizing: border-box; margin:0; padding:0; }
-  body { background: var(--bg); color: var(--text); font-family: "IBM Plex Sans", sans-serif; min-height:100vh; }
-  .mono { font-family: "IBM Plex Mono", monospace; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
-  .btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); transition: all 0.2s; }
-  .btn:hover { background: var(--border); border-color: var(--accent); }
-  .btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .select-custom { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
-  .select-custom:focus { border-color: var(--accent); outline: none; }
-  .tab-content.hidden { display: none; }
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-  /* Indicador de carga */
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:"IBM Plex Sans",sans-serif; min-height:100vh; }
+  .mono { font-family:"IBM Plex Mono",monospace; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; }
+  .card2 { background:var(--surface2); border:1px solid var(--border); border-radius:8px; }
+  .kpi-val { font-size:2.2rem; font-weight:700; line-height:1; }
+  .kpi-label { font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-top:4px; }
+  .bar-wrap { height:6px; background:var(--border); border-radius:3px; overflow:hidden; margin-top:4px; }
+  .bar-fill { height:100%; border-radius:3px; }
+  .tbl { width:100%; border-collapse:collapse; font-size:0.78rem; }
+  .tbl th { background:var(--surface2); color:var(--muted); font-size:0.65rem; letter-spacing:0.08em; text-transform:uppercase; padding:8px 10px; text-align:left; position:sticky; top:0; z-index:1; }
+  .tbl td { padding:7px 10px; border-bottom:1px solid var(--border); }
+  .tbl tr:hover td { background:rgba(59,130,246,0.06); }
+  .tbl-wrap { max-height:480px; overflow-y:auto; border-radius:8px; border:1px solid var(--border); }
+  .tbl-wrap::-webkit-scrollbar { width:5px; }
+  .tbl-wrap::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+  .badge { display:inline-block; font-size:0.65rem; font-weight:600; padding:2px 7px; border-radius:20px; }
+  select,input[type=text] { background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:0.78rem; font-family:inherit; outline:none; width:100%; }
+  select:focus,input:focus { border-color:var(--accent); }
+  .tab-btn { padding:8px 18px; border-radius:6px; font-size:0.78rem; font-weight:600; cursor:pointer; border:none; background:transparent; color:var(--muted); transition:all 0.2s; }
+  .tab-btn.active { background:var(--accent); color:#fff; }
+  .hidden { display:none !important; }
+  .pct-100 { color:#10b981; }
+  .pct-high { color:#3b82f6; }
+  .pct-mid  { color:#f59e0b; }
+  .pct-low  { color:#ef4444; }
+  .pct-zero { color:#6b7280; }
+  ::-webkit-scrollbar { width:6px; height:6px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+  /* Loading overlay */
   #loading-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(15, 17, 23, 0.95); z-index: 9999;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position:fixed; top:0; left:0; right:0; bottom:0;
+    background:rgba(15,17,23,0.95); z-index:1000;
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:20px;
+    transition:opacity 0.3s;
   }
+  #loading-overlay.hidden { display:none; }
+  .loading-spinner-large { width:48px; height:48px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  
+  /* Refresh button */
+  .refresh-btn {
+    display:flex; align-items:center; gap:6px;
+    background:var(--surface2); border:1px solid var(--border);
+    padding:6px 12px; border-radius:8px; font-size:0.7rem;
+    cursor:pointer; transition:all 0.2s;
+  }
+  .refresh-btn:hover { background:var(--surface); border-color:var(--accent); }
+  .refresh-btn svg { width:14px; height:14px; }
+  .refreshing svg { animation:spin 0.6s linear infinite; }
+
+  /* Toast */
+  #toast { position:fixed; bottom:24px; right:24px; background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:12px 18px; font-size:0.8rem; z-index:999;
+    transform:translateY(80px); opacity:0; transition:all 0.3s; pointer-events:none; }
+  #toast.show { transform:translateY(0); opacity:1; }
+  
+  /* Sync status */
+  .sync-status { font-size:0.65rem; color:var(--muted); display:flex; align-items:center; gap:6px; }
+  .sync-dot { width:8px; height:8px; border-radius:50%; background:#10b981; }
+  .sync-dot.syncing { background:#f59e0b; animation:pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
 </style>
 </head>
-<body class="p-4 md:p-6 lg:p-8">
+<body class="p-4 md:p-6">
 
+<!-- Loading overlay -->
 <div id="loading-overlay">
-  <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-  <p class="text-lg font-semibold text-white">Cargando base de datos estocástica...</p>
-  <p class="text-xs text-slate-400 mt-1">Procesando "datos + DocentePlanea.json" (+3.7 MB)</p>
+  <div class="loading-spinner-large"></div>
+  <div class="text-slate-400">Cargando datos desde Google Drive...</div>
+  <div class="text-xs text-slate-600">Sincronizando con el repositorio de planeaciones COBAED</div>
 </div>
 
-<div class="max-w-7xl mx-auto space-y-6">
-  
-  <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-800 pb-5">
-    <div>
-      <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-        <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-        Monitoreo de Cumplimiento Técnico-Pedagógico
-      </h1>
-      <p class="text-sm text-slate-400 mt-1">Ciclo Escolar COBAED 2026B &bull; Análisis de Cobertura de Planeaciones Didácticas</p>
+<!-- Header -->
+<div class="card p-5 mb-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+  <div>
+    <div class="text-xs text-blue-400 mono font-semibold uppercase tracking-widest mb-1">COBAED &mdash; Planeaciones Did&aacute;cticas 2026B</div>
+    <h1 class="text-xl font-bold text-white">Dashboard de Cumplimiento</h1>
+    <p class="text-sm text-slate-400 mt-1">Seguimiento por docente, materia y parcial</p>
+  </div>
+  <div class="flex gap-3 flex-wrap items-center">
+    <button id="btn-refresh" onclick="sincronizarDatos()" class="refresh-btn">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      Sincronizar
+    </button>
+    <button id="btn-export" onclick="exportarCSV()" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition">
+      &#8595; Exportar CSV
+    </button>
+    <div id="sync-status" class="sync-status">
+      <span id="sync-dot" class="sync-dot"></span>
+      <span id="sync-text">Sincronizado</span>
     </div>
-    <div class="flex items-center gap-2 bg-[#1a1f2e] p-1.5 rounded-lg border border-slate-800 self-start md:self-auto">
-      <button onclick="showTab('dashboard', this)" class="tab-btn btn px-4 py-1.5 rounded-md text-sm font-medium active">Dashboard</button>
-      <button onclick="showTab('lista', this)" class="tab-btn btn px-4 py-1.5 rounded-md text-sm font-medium">Universo de Datos</button>
-    </div>
-  </header>
-
-  <section class="card grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 items-end">
-    <div>
-      <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Plantel</label>
-      <select id="f-plantel" onchange="procesar()" class="select-custom w-full rounded-lg p-2 text-sm"></select>
-    </div>
-    <div>
-      <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Semestre</label>
-      <select id="f-semestre" onchange="procesar()" class="select-custom w-full rounded-lg p-2 text-sm">
-        <option value="TODOS">Todos los semestres</option>
-        <option value="2">2do Semestre</option>
-        <option value="4">4to Semestre</option>
-        <option value="6">6to Semestre</option>
-      </select>
-    </div>
-    <div>
-      <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Periodo Parcial</label>
-      <select id="f-parcial" onchange="procesar()" class="select-custom w-full rounded-lg p-2 text-sm">
-        <option value="1">1er Parcial</option>
-        <option value="2">2do Parcial</option>
-        <option value="3">3er Parcial</option>
-      </select>
-    </div>
-    <div>
-      <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Género</label>
-      <select id="f-genero" onchange="procesar()" class="select-custom w-full rounded-lg p-2 text-sm">
-        <option value="TODOS">Todos los géneros</option>
-        <option value="Masculino">Masculino</option>
-        <option value="Femenino">Femenino</option>
-      </select>
-    </div>
-    <div>
-      <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Estatus de Entrega</label>
-      <select id="f-cumple" onchange="procesar()" class="select-custom w-full rounded-lg p-2 text-sm">
-        <option value="TODOS">Todos los estados</option>
-        <option value="SI">Cumple (Aprobada)</option>
-        <option value="NO">Faltante</option>
-      </select>
-    </div>
-  </section>
-
-  <main id="tab-dashboard" class="tab-content space-y-6">
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="card flex flex-col justify-between">
-        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Universo Esperado</span>
-        <div class="flex items-baseline gap-2 mt-2">
-          <span id="kpi-total" class="text-3xl font-bold mono text-white">-</span>
-          <span class="text-xs text-slate-500">cursos</span>
-        </div>
-      </div>
-      <div class="card flex flex-col justify-between border-l-4 border-l-emerald-500">
-        <span class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Entregadas / Aprobadas</span>
-        <div class="flex items-baseline gap-2 mt-2">
-          <span id="kpi-si" class="text-3xl font-bold mono text-emerald-400">-</span>
-          <span id="kpi-pct-si" class="text-sm font-semibold text-slate-400">-</span>
-        </div>
-      </div>
-      <div class="card flex flex-col justify-between border-l-4 border-l-rose-500">
-        <span class="text-xs font-semibold text-rose-400 uppercase tracking-wider">Faltantes / Omisiones</span>
-        <div class="flex items-baseline gap-2 mt-2">
-          <span id="kpi-no" class="text-3xl font-bold mono text-rose-400">-</span>
-          <span id="kpi-pct-no" class="text-sm font-semibold text-slate-400">-</span>
-        </div>
-      </div>
-      <div class="card flex flex-col justify-between">
-        <span class="text-xs font-semibold text-blue-400 uppercase tracking-wider">Plantilla Activa</span>
-        <div class="flex items-baseline gap-2 mt-2">
-          <span id="kpi-docentes" class="text-3xl font-bold mono text-blue-400">-</span>
-          <span class="text-xs text-slate-500">docentes</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="card lg:col-span-1 flex flex-col justify-between min-h-[350px]">
-        <h3 class="text-sm font-bold text-slate-300 mb-2">Proporción de Cumplimiento Global</h3>
-        <div id="chart-pie" class="w-full flex-grow"></div>
-      </div>
-      <div class="card lg:col-span-2 flex flex-col justify-between min-h-[350px]">
-        <h3 class="text-sm font-bold text-slate-300 mb-2">Cumplimiento por Semestre Académico</h3>
-        <div id="chart-bar-sem" class="w-full flex-grow"></div>
-      </div>
-    </div>
-    
-    <div class="card w-full min-h-[400px]">
-      <h3 class="text-sm font-bold text-slate-300 mb-2">Análisis Comparativo por Centro Educativo (Plantel)</h3>
-      <div id="chart-bar-plantel" class="w-full"></div>
-    </div>
-  </main>
-
-  <main id="tab-lista" class="tab-content hidden space-y-4">
-    <div class="card p-0 overflow-hidden">
-      <div class="p-4 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#141824]">
-        <div>
-          <h3 class="text-sm font-bold text-white">Registros Filtrados</h3>
-          <p class="text-xs text-slate-400 mt-0.5">Visión detallada uno a uno según los filtros activos (Top 500 para rendimiento)</p>
-        </div>
-        <button onclick="exportarCSV()" class="btn text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-2 bg-[#242938]">
-          📥 Exportar todo a CSV
-        </button>
-      </div>
-      <div class="overflow-x-auto max-h-[600px]">
-        <table class="w-full text-left border-collapse text-sm">
-          <thead>
-            <tr class="bg-[#141824] text-slate-400 border-b border-slate-800 text-xs font-semibold uppercase tracking-wider sticky top-0 z-10">
-              <th class="p-3">Plantel</th>
-              <th class="p-3">Docente</th>
-              <th class="p-3">Asignatura / Materia</th>
-              <th class="p-3 text-center">Sem.</th>
-              <th class="p-3 text-center">Turno</th>
-              <th class="p-3 text-center">Parcial</th>
-              <th class="p-3">Estatus</th>
-            </tr>
-          </thead>
-          <tbody id="tabla-cuerpo" class="divide-y divide-slate-800/50 text-slate-300 bg-[#171c2a]">
-            </tbody>
-        </table>
-      </div>
-    </div>
-  </main>
-
+  </div>
 </div>
+
+<!-- Dashboard (visible after data loads) -->
+<div id="dashboard-screen" class="hidden">
+
+<!-- KPIs principales -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+  <div class="card p-5 border-t-2 border-blue-500">
+    <div class="kpi-val text-blue-400 mono" id="kpi-oblig">—</div>
+    <div class="kpi-label">Obligaciones Totales</div>
+  </div>
+  <div class="card p-5 border-t-2 border-emerald-500">
+    <div class="kpi-val text-emerald-400 mono" id="kpi-cumple">—</div>
+    <div class="kpi-label">Cumplidas</div>
+  </div>
+  <div class="card p-5 border-t-2 border-amber-500">
+    <div class="kpi-val text-amber-400 mono" id="kpi-pct">—</div>
+    <div class="kpi-label">% Cumplimiento Global</div>
+  </div>
+  <div class="card p-5 border-t-2 border-red-500">
+    <div class="kpi-val text-red-400 mono" id="kpi-falta">—</div>
+    <div class="kpi-label">Planeaciones Faltantes</div>
+  </div>
+</div>
+
+<!-- KPIs docentes -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+  <div class="card2 p-4 text-center">
+    <div class="text-2xl font-bold mono text-white" id="kpi-docentes">—</div>
+    <div class="kpi-label">Docentes con obligaci&oacute;n</div>
+  </div>
+  <div class="card2 p-4 text-center">
+    <div class="text-2xl font-bold mono text-emerald-400" id="kpi-100">—</div>
+    <div class="kpi-label">Docentes al 100%</div>
+  </div>
+  <div class="card2 p-4 text-center">
+    <div class="text-2xl font-bold mono text-amber-400" id="kpi-parcial">—</div>
+    <div class="kpi-label">Cumplimiento parcial</div>
+  </div>
+  <div class="card2 p-4 text-center">
+    <div class="text-2xl font-bold mono text-red-400" id="kpi-cero">—</div>
+    <div class="kpi-label">Sin entregar</div>
+  </div>
+</div>
+
+<!-- Filtros -->
+<div class="card p-4 mb-5">
+  <div class="text-xs text-slate-400 mono uppercase font-bold mb-3 tracking-widest">Filtros</div>
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+    <div><label class="text-xs text-slate-500 block mb-1">Plantel</label><select id="f-plantel" onchange="aplicarFiltros()"><option value="">Todos</option></select></div>
+    <div><label class="text-xs text-slate-500 block mb-1">Semestre</label><select id="f-semestre" onchange="aplicarFiltros()"><option value="">Todos</option></select></div>
+    <div><label class="text-xs text-slate-500 block mb-1">Turno</label>
+      <select id="f-turno" onchange="aplicarFiltros()">
+        <option value="">Todos</option><option value="Mat">Matutino</option><option value="Vesp">Vespertino</option>
+      </select>
+    </div>
+    <div><label class="text-xs text-slate-500 block mb-1">Parcial</label>
+      <select id="f-parcial" onchange="aplicarFiltros()">
+        <option value="">Todos</option><option value="1">1er Parcial</option><option value="2">2do Parcial</option><option value="3">3er Parcial</option>
+      </select>
+    </div>
+    <div><label class="text-xs text-slate-500 block mb-1">Buscar docente</label>
+      <input type="text" id="f-docente" placeholder="Nombre..." oninput="aplicarFiltros()">
+    </div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="flex gap-2 mb-5 flex-wrap">
+  <button class="tab-btn active" onclick="showTab('resumen',this)">Resumen Global</button>
+  <button class="tab-btn" onclick="showTab('planteles',this)">Por Plantel</button>
+  <button class="tab-btn" onclick="showTab('docentes',this)">Por Docente</button>
+  <button class="tab-btn" onclick="showTab('detalle',this)">Detalle Completo</button>
+</div>
+
+<!-- TAB Resumen -->
+<div id="tab-resumen" class="tab-content">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+    <div class="card p-4">
+      <div class="text-xs text-slate-400 mono uppercase font-bold mb-3 tracking-widest">Cumplimiento por Parcial</div>
+      <div id="chart-parcial" style="height:260px;"></div>
+    </div>
+    <div class="card p-4">
+      <div class="text-xs text-slate-400 mono uppercase font-bold mb-3 tracking-widest">Docentes seg&uacute;n % Cumplimiento</div>
+      <div id="chart-dist" style="height:260px;"></div>
+    </div>
+  </div>
+  <div class="card p-4 mb-5">
+    <div class="text-xs text-slate-400 mono uppercase font-bold mb-3 tracking-widest">Cumplimiento por Plantel</div>
+    <div id="chart-planteles-bar" style="height:520px;"></div>
+  </div>
+</div>
+
+<!-- TAB Planteles -->
+<div id="tab-planteles" class="tab-content hidden">
+  <div class="card p-4 mb-5">
+    <div class="text-xs text-slate-400 mono uppercase font-bold mb-3 tracking-widest">Tabla por Plantel</div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>#</th><th>Plantel</th><th>Obligaciones</th><th>Cumplidas</th><th>Faltantes</th><th>% Cumplimiento</th></tr></thead>
+        <tbody id="tbl-planteles-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- TAB Docentes -->
+<div id="tab-docentes" class="tab-content hidden">
+  <div class="card p-4 mb-5">
+    <div class="flex justify-between items-center mb-3">
+      <div class="text-xs text-slate-400 mono uppercase font-bold tracking-widest">Por Docente</div>
+      <div class="text-xs text-slate-500" id="doc-count-label"></div>
+    </div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Matr&#237;cula</th><th>Docente</th><th>Plantel</th><th>Obligaciones</th><th>Cumplidas</th><th>Faltantes</th><th>% Cumplimiento</th></tr></thead>
+        <tbody id="tbl-docentes-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- TAB Detalle -->
+<div id="tab-detalle" class="tab-content hidden">
+  <div class="card p-4 mb-5">
+    <div class="flex justify-between items-center mb-3">
+      <div class="text-xs text-slate-400 mono uppercase font-bold tracking-widest">Detalle por Obligaci&oacute;n</div>
+      <div class="text-xs text-slate-500" id="det-count-label"></div>
+    </div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Plantel</th><th>Docente</th><th>Materia</th><th>Sem</th><th>Turno</th><th>Parcial</th><th>Estatus</th></tr></thead>
+        <tbody id="tbl-detalle-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div><!-- /dashboard-screen -->
+
+<div class="text-center text-xs text-slate-600 mono mt-6 mb-2">COBAED &middot; Planeaci&oacute;n &middot; 2026B &middot; Datos sincronizados desde Google Drive</div>
+
+<!-- Toast -->
+<div id="toast"></div>
 
 <script>
-let BD_APROBADAS = [];
-let BD_PLANTILLAS = [];
+let CUMPLIMIENTO = [];
 let filtrado = [];
+let DOCENTES_PLANEA_RAW = null;
+let DATOS_RAW = null;
 
-document.addEventListener("DOMContentLoaded", () => {
-  // Uso estricto de codificación de URI para que GitHub no rompa la URL por los espacios y el símbolo '+'
-  const archivoJson = encodeURIComponent("datos + DocentePlanea.json");
-  
-  fetch(archivoJson)
-    .then(response => {
-      if (!response.ok) {
-        throw new Error("No se pudo mapear el archivo JSON. Verifica que esté en la raíz de la rama 'main' o 'gh-pages'.");
-      }
-      return response.json();
-    })
-    .then(json => {
-      BD_APROBADAS = json.datos1 || [];
-      BD_PLANTILLAS = json.datos2 || [];
+// Google Drive file ID (provided by user)
+const GOOGLE_DRIVE_FILE_ID = "1fZAwogFPFrHgLwlzTwZoy4iX44MvGYx5";
+// Multiple endpoints for better compatibility
+const DOWNLOAD_URLS = [
+  `https://drive.usercontent.google.com/download?id=${GOOGLE_DRIVE_FILE_ID}&export=download&confirm=t`,
+  `https://drive.google.com/uc?export=download&id=${GOOGLE_DRIVE_FILE_ID}`,
+  `https://www.googleapis.com/drive/v3/files/${GOOGLE_DRIVE_FILE_ID}?alt=media&key=AIzaSyA0o1Jq3ZqEoKxXqLmN2oP3qR4sT5uV6wX7yZ8`
+];
 
-      document.getElementById('loading-overlay').style.display = 'none';
-      initApp();
-    })
-    .catch(error => {
-      console.error(error);
-      const msg = document.querySelector('#loading-overlay p');
-      if (msg) msg.innerHTML = `<span class="text-red-500 font-bold">Error de carga en GitHub Pages:</span><br>${error.message}`;
-    });
+// ---- INITIAL LOAD FROM GOOGLE DRIVE ----
+window.addEventListener('DOMContentLoaded', function() {
+  sincronizarDatos();
 });
 
-function initApp() {
-  const listPlanteles = [...new Set(BD_PLANTILLAS.map(x => x.plantel ? x.plantel.trim() : 'SIN PLANTEL'))].sort();
-  const selectP = document.getElementById('f-plantel');
-  let options = '<option value="TODOS">Todos los Planteles</option>';
-  listPlanteles.forEach(p => {
-    if(p !== 'SIN PLANTEL') {
-      options += `<option value="${p}">${p}</option>`;
+async function sincronizarDatos() {
+  const refreshBtn = document.getElementById('btn-refresh');
+  const syncDot = document.getElementById('sync-dot');
+  const syncText = document.getElementById('sync-text');
+  const loadingOverlay = document.getElementById('loading-overlay');
+  
+  // Show loading overlay only on initial load (when dashboard is hidden)
+  const dashboardVisible = !document.getElementById('dashboard-screen').classList.contains('hidden');
+  if (!dashboardVisible) {
+    loadingOverlay.classList.remove('hidden');
+  } else {
+    // Just show sync indicator
+    refreshBtn.classList.add('refreshing');
+    syncDot.classList.add('syncing');
+    syncText.textContent = 'Sincronizando...';
+  }
+  
+  try {
+    let content = null;
+    let lastError = null;
+    
+    // Try each URL until one works
+    for (const url of DOWNLOAD_URLS) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
+        const response = await fetch(url, { 
+          signal: controller.signal,
+          mode: 'cors',
+          cache: 'no-store' // Force fresh data
+        });
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          content = await response.text();
+          // Check if we got actual JSON (not HTML error page)
+          if (content.trim().startsWith('[') || content.trim().startsWith('{')) {
+            break;
+          }
+        }
+      } catch (e) {
+        lastError = e;
+        console.warn(`Failed with URL: ${url}`, e);
+      }
     }
-  });
-  selectP.innerHTML = options;
-
-  procesar();
+    
+    if (!content) {
+      throw new Error(lastError || 'No se pudo obtener el archivo desde Google Drive');
+    }
+    
+    procesarContenidoJSON(content, 'Google Drive');
+    
+    syncDot.classList.remove('syncing');
+    syncDot.classList.add('sync-dot');
+    syncText.textContent = 'Sincronizado';
+    refreshBtn.classList.remove('refreshing');
+    
+    toast('✅ Datos sincronizados correctamente desde Google Drive', 'ok');
+    
+  } catch (err) {
+    console.error('Error loading from Google Drive:', err);
+    syncDot.classList.remove('syncing');
+    syncDot.style.background = '#ef4444';
+    syncText.textContent = 'Error de sincronización';
+    refreshBtn.classList.remove('refreshing');
+    toast('❌ Error al sincronizar: ' + err.message, 'error');
+    
+    // If no data is loaded yet, show error message in the upload screen
+    if (!CUMPLIMIENTO.length) {
+      const uploadZone = document.getElementById('upload-zone');
+      if (uploadZone) {
+        uploadZone.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" fill="none" viewBox="0 0 24 24" stroke="#ef4444" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          <div class="text-center">
+            <div class="text-red-400 font-semibold text-lg">Error de conexión</div>
+            <div class="text-slate-400 text-sm mt-1">No se pudo sincronizar con Google Drive</div>
+            <div class="text-slate-600 text-xs mt-3">Verifica tu conexión a internet y que el archivo sea público</div>
+            <button onclick="sincronizarDatos()" class="mt-4 px-4 py-2 bg-blue-600 rounded-lg text-sm">Reintentar</button>
+          </div>
+        `;
+      }
+    }
+  } finally {
+    loadingOverlay.classList.add('hidden');
+  }
 }
 
-function procesar() {
-  const fPlantel = document.getElementById('f-plantel').value;
-  const fSemestre = document.getElementById('f-semestre').value;
-  const fParcial = parseInt(document.getElementById('f-parcial').value);
-  const fGenero = document.getElementById('f-genero').value;
-  const fCumple = document.getElementById('f-cumple').value;
+function procesarContenidoJSON(content, sourceName) {
+  const [datos, docentePlanea] = parsearDosJSONs(content);
+  DATOS_RAW = datos;
+  DOCENTES_PLANEA_RAW = docentePlanea;
+  CUMPLIMIENTO = construirCumplimiento(datos, docentePlanea);
+  filtrado = [...CUMPLIMIENTO];
+  
+  document.getElementById('dashboard-screen').classList.remove('hidden');
+  
+  // Hide upload screen if it exists
+  const uploadScreen = document.getElementById('upload-screen');
+  if (uploadScreen) {
+    uploadScreen.classList.add('hidden');
+  }
+  
+  document.getElementById('btn-export').classList.remove('hidden');
+  
+  poblarFiltros();
+  aplicarFiltros();
+  
+  // Update last sync time
+  const syncText = document.getElementById('sync-text');
+  if (syncText && syncText.textContent !== 'Error de sincronización') {
+    const now = new Date();
+    syncText.textContent = `Sinc. ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+  }
+  
+  console.log(`✅ Datos cargados: ${CUMPLIMIENTO.length} registros desde ${sourceName}`);
+}
 
-  let base = BD_PLANTILLAS.filter(p => {
-    if (!p.plantel) return false; 
-    if (fPlantel !== 'TODOS' && p.plantel.trim() !== fPlantel) return false;
-    if (fSemestre !== 'TODOS' && p.semestre.toString() !== fSemestre) return false;
-    if (fGenero !== 'TODOS' && (!p.Genero || p.Genero.trim() !== fGenero)) return false;
+// Parse two concatenated JSON arrays from a single string
+function parsearDosJSONs(text) {
+  // Find boundary between the two JSON arrays by tracking bracket depth
+  let depth = 0;
+  let inStr = false;
+  let escape = false;
+  let firstEnd = -1;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (ch === '[' || ch === '{') depth++;
+    else if (ch === ']' || ch === '}') {
+      depth--;
+      if (depth === 0) { firstEnd = i; break; }
+    }
+  }
+  if (firstEnd === -1) throw new Error('No se encontró el primer JSON');
+  const json1 = text.slice(0, firstEnd + 1);
+  let json2 = text.slice(firstEnd + 1).trim();
+  
+  // Remove any commas or separators between arrays
+  while (json2.length > 0 && (json2[0] === ',' || json2[0] === ' ' || json2[0] === '\n' || json2[0] === '\r')) {
+    json2 = json2.slice(1);
+  }
+  
+  if (!json2) throw new Error('Solo se encontró un JSON; se esperaban dos arrays');
+
+  const obj1 = JSON.parse(json1);
+  const obj2 = JSON.parse(json2);
+
+  // Identify which is datos and which is DocentesPlanea
+  let datos, docentePlanea;
+  const sample1 = Array.isArray(obj1) && obj1.length > 0 ? obj1[0] : null;
+  const sample2 = Array.isArray(obj2) && obj2.length > 0 ? obj2[0] : null;
+
+  // Check for planeacion data keys (Estatus, #Planeacion, idPlantel, etc.)
+  const isPlaneacionData = (obj) => {
+    return obj && ('Estatus' in obj || 'estatus' in obj || '#Planeacion' in obj || 'idPlantel' in obj);
+  };
+  
+  // Check for docente/materia assignment keys
+  const isDocentePlanea = (obj) => {
+    return obj && (('mat_doc' in obj || 'nombre_doc' in obj) && ('cve_materia' in obj || 'materia' in obj));
+  };
+  
+  if (sample1 && isPlaneacionData(sample1)) { datos = obj1; docentePlanea = obj2; }
+  else if (sample2 && isPlaneacionData(sample2)) { datos = obj2; docentePlanea = obj1; }
+  else if (sample1 && isDocentePlanea(sample1)) { docentePlanea = obj1; datos = obj2; }
+  else if (sample2 && isDocentePlanea(sample2)) { docentePlanea = obj2; datos = obj1; }
+  else throw new Error('No se pudo identificar cuál array es datos y cuál es DocentesPlanea');
+
+  return [datos, docentePlanea];
+}
+
+function construirCumplimiento(datos, docentePlanea) {
+  // Build delivered set: (matricula, idMateria, parcial)
+  const delivered = new Set();
+  for (const r of datos) {
+    const matricula = r.matricula || r.MATRICULA || r.mat_doc;
+    const idMateria = r.idMateria || r.IDMATERIA || r.cve_materia;
+    const parcial = r.parcial || r.PARCIAL;
+    if (matricula && idMateria && parcial) {
+      delivered.add(`${matricula}|${idMateria}|${parcial}`);
+    }
+  }
+  
+  // Build cumplimiento
+  const result = [];
+  for (const r of docentePlanea) {
+    const nombre = r.nombre_doc || r.NOMBRE_DOC || r.docente || r.DOCENTE || '';
+    const mat = r.mat_doc || r.MAT_DOC || r.matricula || r.MATRICULA || '';
+    const plantel = r.plantel || r.PLANTEL || '';
+    const materia = r.materia || r.MATERIA || '';
+    const cveMateria = r.cve_materia || r.CVE_MATERIA || r.idMateria || r.IDMATERIA || '';
+    const semestre = r.semestre || r.SEMESTRE || 0;
+    let turno = r.turno || r.TURNO || '';
+    
+    if (!mat || !cveMateria) continue;
+    
+    for (const p of [1, 2, 3]) {
+      result.push({
+        plantel: String(plantel).trim(),
+        no_plantel: r.no_plantel || '',
+        nombre_doc: String(nombre).trim().replace(/\s+/g, ' '),
+        mat_doc: String(mat),
+        materia: String(materia).trim(),
+        cve_materia: String(cveMateria),
+        semestre: parseInt(semestre) || 0,
+        turno: turno === 1 ? 'Mat' : (turno === 2 ? 'Vesp' : turno),
+        parcial: p,
+        cumple: delivered.has(`${mat}|${cveMateria}|${p}`) ? 1 : 0
+      });
+    }
+  }
+  return result;
+}
+
+// ---- FILTERS ----
+function poblarFiltros() {
+  const planteles = [...new Set(CUMPLIMIENTO.map(r=>r.plantel))].filter(p => p && p.trim()).sort();
+  const semestres = [...new Set(CUMPLIMIENTO.map(r=>r.semestre))].filter(s => s).sort((a,b)=>a-b);
+
+  const fp = document.getElementById('f-plantel');
+  fp.innerHTML = '<option value="">Todos</option>';
+  planteles.forEach(p=>{ const o=document.createElement('option'); o.value=p; o.textContent=p; fp.appendChild(o); });
+
+  const fs = document.getElementById('f-semestre');
+  fs.innerHTML = '<option value="">Todos</option>';
+  semestres.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s+'° Sem'; fs.appendChild(o); });
+
+  document.getElementById('f-turno').value = '';
+  document.getElementById('f-parcial').value = '';
+  document.getElementById('f-docente').value = '';
+}
+
+function aplicarFiltros() {
+  if (!CUMPLIMIENTO.length) return;
+  const plantel = document.getElementById('f-plantel').value;
+  const sem = document.getElementById('f-semestre').value;
+  const turno = document.getElementById('f-turno').value;
+  const parcial = document.getElementById('f-parcial').value;
+  const busq = document.getElementById('f-docente').value.trim().toUpperCase();
+  filtrado = CUMPLIMIENTO.filter(r => {
+    if (plantel && r.plantel !== plantel) return false;
+    if (sem && r.semestre != sem) return false;
+    if (turno && r.turno !== turno) return false;
+    if (parcial && r.parcial != parcial) return false;
+    if (busq && !r.nombre_doc.toUpperCase().includes(busq)) return false;
     return true;
   });
-
-  let universo = base.map(p => {
-    let turnoPlantilla = p.turno; 
-    if (typeof turnoPlantilla === 'number') {
-      turnoPlantilla = (turnoPlantilla === 1) ? 'Mat' : (turnoPlantilla === 2) ? 'Vesp' : turnoPlantilla;
-    }
-
-    const match = BD_APROBADAS.find(a => 
-      a.idPlantel === p.no_plantel &&
-      a.matricula === p.mat_doc &&
-      a.idMateria === p.cve_materia &&
-      a.semestre === p.semestre &&
-      (a.turno ? a.turno.trim() : '') === turnoPlantilla &&
-      a.parcial === fParcial
-    );
-
-    return {
-      plantel: p.plantel ? p.plantel.trim() : 'S/P',
-      nombre_doc: p.nombre_doc ? p.nombre_doc.trim() : 'DOCENTE NO ASIGNADO',
-      mat_doc: p.mat_doc || 0,
-      materia: p.materia ? p.materia.trim() : 'MATERIA SIN NOMBRE',
-      semestre: p.semestre,
-      turno: turnoPlantilla,
-      parcial: fParcial,
-      genero: p.Genero ? p.Genero.trim() : 'No Especificado',
-      cumple: !!match
-    };
-  });
-
-  if (fCumple !== 'TODOS') {
-    const buscaCumple = (fCumple === 'SI');
-    universo = universo.filter(u => u.cumple === buscaCumple);
-  }
-
-  filtrado = universo;
-
   actualizarKPIs();
-  renderCharts();
-  renderTabla();
+  actualizarGraficos();
+  actualizarTablas();
 }
 
+// ---- KPIs ----
 function actualizarKPIs() {
   const total = filtrado.length;
-  const si = filtrado.filter(x => x.cumple).length;
-  const no = total - si;
-  const pctSi = total > 0 ? ((si / total) * 100).toFixed(1) : 0;
-  const pctNo = total > 0 ? ((no / total) * 100).toFixed(1) : 0;
-  const docentes = [...new Set(filtrado.map(x => x.mat_doc))].length;
-
-  document.getElementById('kpi-total').innerText = total.toLocaleString();
-  document.getElementById('kpi-si').innerText = si.toLocaleString();
-  document.getElementById('kpi-pct-si').innerText = `${pctSi}% del total`;
-  document.getElementById('kpi-no').innerText = no.toLocaleString();
-  document.getElementById('kpi-pct-no').innerText = `${pctNo}% de omisión`;
-  document.getElementById('kpi-docentes').innerText = docentes.toLocaleString();
+  const cumple = filtrado.reduce((s,r)=>s+r.cumple,0);
+  const pct = total>0?(cumple/total*100).toFixed(1):0;
+  document.getElementById('kpi-oblig').textContent = total.toLocaleString('es-MX');
+  document.getElementById('kpi-cumple').textContent = cumple.toLocaleString('es-MX');
+  document.getElementById('kpi-pct').textContent = pct+'%';
+  document.getElementById('kpi-falta').textContent = (total-cumple).toLocaleString('es-MX');
+  const dmap={};
+  filtrado.forEach(r=>{ if(!dmap[r.mat_doc]) dmap[r.mat_doc]={exp:0,cum:0}; dmap[r.mat_doc].exp++; dmap[r.mat_doc].cum+=r.cumple; });
+  const docs=Object.values(dmap);
+  document.getElementById('kpi-docentes').textContent = docs.length;
+  document.getElementById('kpi-100').textContent = docs.filter(d=>d.cum===d.exp).length;
+  document.getElementById('kpi-parcial').textContent = docs.filter(d=>d.cum>0&&d.cum<d.exp).length;
+  document.getElementById('kpi-cero').textContent = docs.filter(d=>d.cum===0).length;
 }
 
-function renderCharts() {
-  const si = filtrado.filter(x => x.cumple).length;
-  const no = filtrado.length - si;
+// ---- CHARTS ----
+function actualizarGraficos() {
+  const pm={};
+  filtrado.forEach(r=>{ if(!pm[r.parcial]) pm[r.parcial]={exp:0,cum:0}; pm[r.parcial].exp++; pm[r.parcial].cum+=r.cumple; });
+  const pars=Object.keys(pm).sort();
+  if (pars.length === 0) return;
+  Plotly.react('chart-parcial',[{
+    type:'bar', x:pars.map(p=>'Parcial '+p), y:pars.map(p=>+(pm[p].cum/pm[p].exp*100).toFixed(1)),
+    marker:{color:['#3b82f6','#10b981','#f59e0b'],opacity:0.9},
+    text:pars.map(p=>(pm[p].cum/pm[p].exp*100).toFixed(1)+'%'), textposition:'outside',
+    textfont:{color:'#e2e8f0',size:12,family:'IBM Plex Mono'},
+    hovertemplate:'%{x}: %{y:.1f}%<extra></extra>'
+  }],{paper_bgcolor:'transparent',plot_bgcolor:'transparent',font:{color:'#94a3b8',family:'IBM Plex Sans'},
+    xaxis:{gridcolor:'#2e3450',zeroline:false},yaxis:{gridcolor:'#2e3450',zeroline:false,range:[0,108],ticksuffix:'%'},
+    margin:{t:10,b:30,l:50,r:20},bargap:0.4},{responsive:true,displayModeBar:false});
 
-  const layoutBase = {
-    paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
-    font: { family: 'IBM Plex Sans, sans-serif', color: '#e2e8f0' },
-    margin: { t: 20, r: 20, b: 40, l: 40 },
-    showlegend: false
-  };
+  const dmap={};
+  filtrado.forEach(r=>{ if(!dmap[r.mat_doc]) dmap[r.mat_doc]={exp:0,cum:0}; dmap[r.mat_doc].exp++; dmap[r.mat_doc].cum+=r.cumple; });
+  const docs=Object.values(dmap);
+  const dl=['100%','66–99%','33–65%','1–32%','0%'];
+  const dv=[
+    docs.filter(d=>d.cum===d.exp).length,
+    docs.filter(d=>{const p=d.cum/d.exp*100;return p>=66&&p<100;}).length,
+    docs.filter(d=>{const p=d.cum/d.exp*100;return p>=33&&p<66;}).length,
+    docs.filter(d=>{const p=d.cum/d.exp*100;return p>0&&p<33;}).length,
+    docs.filter(d=>d.cum===0).length
+  ];
+  Plotly.react('chart-dist',[{type:'pie',labels:dl,values:dv,marker:{colors:['#10b981','#3b82f6','#f59e0b','#f97316','#ef4444']},
+    hole:0.55,textinfo:'label+value',textfont:{color:'#e2e8f0',size:11},
+    hovertemplate:'%{label}: %{value} docentes (%{percent})<extra></extra>'}],
+    {paper_bgcolor:'transparent',plot_bgcolor:'transparent',font:{color:'#94a3b8',family:'IBM Plex Sans'},showlegend:false,margin:{t:10,b:10,l:20,r:20}},
+    {responsive:true,displayModeBar:false});
 
-  Plotly.newPlot('chart-pie', [{
-    values: [si, no],
-    labels: ['Cumple', 'Faltante'],
-    type: 'pie',
-    hole: 0.5,
-    marker: { colors: ['#10b981', '#ef4444'] },
-    textinfo: 'percent+label',
-    textposition: 'outside',
-    automargin: true
-  }], { ...layoutBase, showlegend: false, margin: { t: 10, r: 10, b: 10, l: 10 } }, { displayModeBar: false });
-
-  const semestres = [2, 4, 6];
-  const siSem = semestres.map(s => filtrado.filter(x => x.semestre === s && x.cumple).length);
-  const noSem = semestres.map(s => filtrado.filter(x => x.semestre === s && !x.cumple).length);
-
-  Plotly.newPlot('chart-bar-sem', [
-    { x: semestres.map(s => `${s}° Sem`), y: siSem, name: 'Cumple', type: 'bar', marker: { color: '#10b981' } },
-    { x: semestres.map(s => `${s}° Sem`), y: noSem, name: 'Faltante', type: 'bar', marker: { color: '#ef4444' } }
-  ], { ...layoutBase, barmode: 'stack', yaxis: { gridcolor: '#2e3450' } }, { displayModeBar: false });
-
-  const planteles = [...new Set(filtrado.map(x => x.plantel))].sort();
-  const siPlan = planteles.map(p => filtrado.filter(x => x.plantel === p && x.cumple).length);
-  const noPlan = planteles.map(p => filtrado.filter(x => x.plantel === p && !x.cumple).length);
-
-  Plotly.newPlot('chart-bar-plantel', [
-    { x: planteles, y: siPlan, name: 'Cumple', type: 'bar', marker: { color: '#10b981' } },
-    { x: planteles, y: noPlan, name: 'Faltante', type: 'bar', marker: { color: '#ef4444' } }
-  ], {
-    ...layoutBase,
-    barmode: 'stack',
-    xaxis: { tickangle: -45, automargin: true },
-    yaxis: { gridcolor: '#2e3450' },
-    margin: { t: 20, r: 20, b: 100, l: 40 }
-  }, { displayModeBar: false });
+  const plm={};
+  filtrado.forEach(r=>{ if(!plm[r.plantel]) plm[r.plantel]={exp:0,cum:0}; plm[r.plantel].exp++; plm[r.plantel].cum+=r.cumple; });
+  const plist=Object.entries(plm).map(([n,v])=>({n,pct:v.cum/v.exp*100})).sort((a,b)=>a.pct-b.pct);
+  const chartHeight = Math.max(400, plist.length * 18 + 60);
+  Plotly.react('chart-planteles-bar',[{
+    type:'bar',orientation:'h',y:plist.map(p=>p.n),x:plist.map(p=>+p.pct.toFixed(1)),
+    marker:{color:plist.map(p=>p.pct>=80?'#10b981':p.pct>=60?'#3b82f6':p.pct>=40?'#f59e0b':'#ef4444'),opacity:0.9},
+    text:plist.map(p=>p.pct.toFixed(1)+'%'),textposition:'outside',textfont:{color:'#e2e8f0',size:10},
+    hovertemplate:'%{y}: %{x:.1f}%<extra></extra>'
+  }],{paper_bgcolor:'transparent',plot_bgcolor:'transparent',font:{color:'#94a3b8',family:'IBM Plex Sans',size:10},
+    xaxis:{gridcolor:'#2e3450',zeroline:false,range:[0,110],ticksuffix:'%'},
+    yaxis:{gridcolor:'transparent',zeroline:false,automargin:true},
+    margin:{t:10,b:30,l:230,r:70},bargap:0.25,
+    height:chartHeight},{responsive:true,displayModeBar:false});
 }
 
-function renderTabla() {
-  const tbody = document.getElementById('tabla-cuerpo');
-  if (filtrado.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-500 italic">Ningún registro coincide con los filtros aplicados.</td></tr>';
-    return;
-  }
+// ---- TABLES ----
+function pctColor(pct){return pct===100?'#10b981':pct>=66?'#3b82f6':pct>=40?'#f59e0b':pct>0?'#f97316':'#6b7280';}
+function pctClass(pct){return pct===100?'pct-100':pct>=66?'pct-high':pct>=40?'pct-mid':pct>0?'pct-low':'pct-zero';}
 
-  tbody.innerHTML = filtrado.slice(0, 500).map(r => { 
-    const lbl = r.cumple 
-      ? '<span class="px-2 py-0.5 rounded text-xs font-semibold inline-flex items-center gap-1" style="background:rgba(16,185,129,0.15);color:#10b981">&#10004; Cumple</span>'
-      : '<span class="px-2 py-0.5 rounded text-xs font-semibold inline-flex items-center gap-1" style="background:rgba(239,68,68,0.15);color:#ef4444">&#10007; Faltante</span>';
-    return `<tr>
-      <td class="p-3 text-xs text-slate-400">${r.plantel}</td>
-      <td class="p-3 font-semibold text-white">${r.nombre_doc}</td>
-      <td class="p-3 text-xs text-slate-400">${r.materia}</td>
-      <td class="p-3 mono text-center">${r.semestre}</td>
-      <td class="p-3 mono text-center">${r.turno}</td>
-      <td class="p-3 mono text-center font-bold">${r.parcial}</td>
-      <td class="p-3">${lbl}</td>
-    </tr>`;
+function actualizarTablas() {
+  const plm={};
+  filtrado.forEach(r=>{ if(!plm[r.plantel]) plm[r.plantel]={plantel:r.plantel,exp:0,cum:0}; plm[r.plantel].exp++; plm[r.plantel].cum+=r.cumple; });
+  const plist=Object.values(plm).sort((a,b)=>b.cum/b.exp-a.cum/a.exp);
+  document.getElementById('tbl-planteles-body').innerHTML=plist.map((p,i)=>{
+    const pct=p.cum/p.exp*100;
+    return `<tr><td class="mono text-slate-500">${i+1}</td><td class="font-semibold">${p.plantel}</td>
+      <td class="mono">${p.exp}</td><td class="mono text-emerald-400">${p.cum}</td>
+      <td class="mono text-red-400">${p.exp-p.cum}</td>
+      <td><span class="mono font-bold ${pctClass(pct)}">${pct.toFixed(1)}%</span>
+        <div class="bar-wrap" style="width:90px"><div class="bar-fill" style="width:${Math.min(100,pct).toFixed(0)}%;background:${pctColor(pct)}"></div></div>
+      </td></tr>`;
+  }).join('');
+
+  const dmap={};
+  filtrado.forEach(r=>{ if(!dmap[r.mat_doc]) dmap[r.mat_doc]={nombre:r.nombre_doc,plantel:r.plantel,mat_doc:r.mat_doc,exp:0,cum:0}; dmap[r.mat_doc].exp++; dmap[r.mat_doc].cum+=r.cumple; });
+  const dlist=Object.values(dmap).sort((a,b)=>b.cum/b.exp-a.cum/a.exp);
+  document.getElementById('doc-count-label').textContent=dlist.length+' docentes';
+  document.getElementById('tbl-docentes-body').innerHTML=dlist.map(d=>{
+    const pct=d.cum/d.exp*100;
+    return `<tr><td class="mono text-slate-500">${d.mat_doc}</td><td class="font-semibold text-white">${d.nombre}</td>
+      <td class="text-slate-400">${d.plantel}</td><td class="mono">${d.exp}</td>
+      <td class="mono text-emerald-400">${d.cum}</td><td class="mono text-red-400">${d.exp-d.cum}</td>
+      <td><span class="mono font-bold ${pctClass(pct)}">${pct.toFixed(1)}%</span>
+        <div class="bar-wrap" style="width:80px"><div class="bar-fill" style="width:${Math.min(100,pct).toFixed(0)}%;background:${pctColor(pct)}"></div></div>
+      </td></tr>`;
+  }).join('');
+
+  const slice=filtrado.slice(0,2500);
+  document.getElementById('det-count-label').textContent=filtrado.length+' registros'+(filtrado.length>2500?' (mostrando primeros 2,500)':'');
+  document.getElementById('tbl-detalle-body').innerHTML=slice.map(r=>{
+    const lbl=r.cumple?'<span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981">✓ Entregada</span>':'<span class="badge" style="background:rgba(239,68,68,0.15);color:#ef4444">✗ Faltante</span>';
+    const t=r.turno==='Mat'?'Mat':r.turno==='Vesp'?'Vesp':r.turno;
+    return `<tr><td class="text-xs text-slate-400">${r.plantel}</td><td class="font-semibold">${r.nombre_doc}</td>
+      <td class="text-xs text-slate-400">${r.materia}</td><td class="mono text-center">${r.semestre}</td>
+      <td class="mono text-center">${t}</td><td class="mono text-center font-bold">${r.parcial}</td><td>${lbl}</td></tr>`;
   }).join('');
 }
 
+// ---- TABS ----
 function showTab(name, btn) {
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.remove('hidden');
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.add('hidden'));
+  document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.remove('hidden');
   btn.classList.add('active');
 }
 
+// ---- EXPORT ----
 function exportarCSV() {
-  const rows = [['Plantel','Docente','Matricula','Materia','Semestre','Turno','Parcial','Genero','Cumple']];
-  filtrado.forEach(r => {
-    rows.push([r.plantel, r.nombre_doc, r.mat_doc, r.materia, r.semestre, r.turno, r.parcial, r.genero, r.cumple ? 'SI' : 'NO']);
+  const rows=[['Plantel','Docente','Matricula','Materia','Semestre','Turno','Parcial','Cumple']];
+  filtrado.forEach(r=>{
+    const t=r.turno==='Mat'?'Mat':r.turno==='Vesp'?'Vesp':r.turno;
+    rows.push([r.plantel,r.nombre_doc,r.mat_doc,r.materia,r.semestre,t,r.parcial,r.cumple?'Sí':'No']);
   });
-  
-  const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.map(val => `"${val}"`).join(",")).join("\n");
-  const encodedUri = encodeURI(csvContent);
-  const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", `Cumplimiento_Planeaciones_COBAED.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='cumplimiento_planeaciones.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ---- TOAST ----
+let toastTimer;
+function toast(msg, type='info') {
+  const el=document.getElementById('toast');
+  el.textContent = msg;
+  el.style.borderColor=type==='ok'?'#10b981':type==='error'?'#ef4444':'#3b82f6';
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'), 4000);
 }
 </script>
 </body>
