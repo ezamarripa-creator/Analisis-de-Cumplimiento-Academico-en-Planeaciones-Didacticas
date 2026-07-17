@@ -65,6 +65,7 @@
         }
         .btn-primary   { background: #2563eb; color: #fff; }
         .btn-primary:hover   { background: #1d4ed8; }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
         .btn-success   { background: #059669; color: #fff; }
         .btn-success:hover   { background: #047857; }
         .btn-ghost     { background: transparent; color: #94a3b8; font-size: 1rem; padding: 6px 10px; }
@@ -201,6 +202,23 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        /* Estilo para el mensaje de configuración de API */
+        .api-setup-notice {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            color: #92400e;
+            font-size: 0.8rem;
+        }
+        .api-setup-notice code {
+            background: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+
         @media (max-width: 640px) {
             .header { padding: 16px; }
             .tab-content { padding: 16px 14px 40px; }
@@ -214,7 +232,7 @@
 <div class="header">
     <div class="header-left">
         <h1><i class="fas fa-file-excel" style="color:#34d399;margin-right:8px;"></i>Análisis de Cumplimiento en Planeaciones Didácticas</h1>
-        <p>Colegio de Bachilleres del Estado de Durango &nbsp;·&nbsp; Módulo de Visualización y Análisis &nbsp;<span style="color:#34d399;font-weight:700;">V6 (Google Drive)</span></p>
+        <p>Colegio de Bachilleres del Estado de Durango &nbsp;·&nbsp; Módulo de Visualización y Análisis &nbsp;<span style="color:#34d399;font-weight:700;">V6 (Google Drive API)</span></p>
         <div class="header-badge">
             <span>Planeaciones cargadas:</span>
             <span id="total-raw">0</span>
@@ -252,6 +270,15 @@
 
 <!-- ══════════════════ TAB: RESUMEN GENERAL ══════════════════ -->
 <div id="tab-resumen" class="tab-content active">
+    <!-- Aviso de configuración de API -->
+    <div id="api-notice" class="api-setup-notice" style="display:none;">
+        <i class="fas fa-info-circle"></i> 
+        <strong>Configuración de API requerida:</strong> Para usar la sincronización con Google Drive, necesitas una 
+        <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:#2563eb;">clave de API de Google Drive</a>.
+        <br>
+        <span style="font-size:0.75rem;">Reemplaza <code>TU_API_KEY</code> en el código con tu clave de API.</span>
+    </div>
+
     <div class="filters-bar">
         <div class="filter-group">
             <label>Plantel</label>
@@ -472,10 +499,15 @@
 <!-- ═══════════════════════════ SCRIPTS ═══════════════════════════ -->
 <script>
 // ───────────────────────────────────────────────────────
-// CONFIGURACIÓN
+// CONFIGURACIÓN - ¡IMPORTANTE! Reemplaza con tu API Key
 // ───────────────────────────────────────────────────────
 const GOOGLE_DRIVE_FILE_ID = '1eBwnD79L56hzToxuGb7BiECPkkxb3jrD';
-const GOOGLE_DRIVE_EXPORT_URL = `https://drive.google.com/uc?export=download&id=${GOOGLE_DRIVE_FILE_ID}`;
+// OBTÉN TU API KEY EN: https://console.cloud.google.com/apis/credentials
+// Y reemplázala en la variable de abajo:
+const GOOGLE_DRIVE_API_KEY = 'AIzaSyBv4WX-nmAv0gXQJh5m5b_eQkZNwQh9iRg'; // <-- REEMPLAZA ESTO
+
+// URL para usar la API de Google Drive
+const GOOGLE_DRIVE_API_URL = `https://www.googleapis.com/drive/v3/files/${GOOGLE_DRIVE_FILE_ID}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet&key=${GOOGLE_DRIVE_API_KEY}`;
 
 // ───────────────────────────────────────────────────────
 // ESTADO GLOBAL
@@ -486,7 +518,7 @@ let cumplimientoData = [];  // cruce calculado
 let isSyncing = false;
 
 // ───────────────────────────────────────────────────────
-// SINCRONIZACIÓN CON GOOGLE DRIVE
+// SINCRONIZACIÓN CON GOOGLE DRIVE USANDO API
 // ───────────────────────────────────────────────────────
 async function syncFromDrive() {
     if (isSyncing) return;
@@ -497,9 +529,30 @@ async function syncFromDrive() {
     btnText.innerHTML = '<span class="spinner"></span> Cargando...';
 
     try {
-        const response = await fetch(GOOGLE_DRIVE_EXPORT_URL);
-        if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+        // Mostrar mensaje si no hay API Key configurada
+        if (GOOGLE_DRIVE_API_KEY === 'TU_API_KEY' || GOOGLE_DRIVE_API_KEY === 'AIzaSyBv4WX-nmAv0gXQJh5m5b_eQkZNwQh9iRg') {
+            document.getElementById('api-notice').style.display = 'block';
+            throw new Error('⚠️ Necesitas configurar una API Key de Google Drive. Reemplaza GOOGLE_DRIVE_API_KEY en el código.');
+        } else {
+            document.getElementById('api-notice').style.display = 'none';
+        }
+
+        // Descargar archivo usando la API de Google Drive
+        const response = await fetch(GOOGLE_DRIVE_API_URL);
         
+        if (!response.ok) {
+            let errorMsg = `Error HTTP: ${response.status}`;
+            if (response.status === 403) {
+                errorMsg = '⚠️ Error 403: La API Key no tiene permisos para acceder a este archivo. Verifica que:\n' +
+                          '1. La API Key sea correcta\n' +
+                          '2. El archivo sea público o esté compartido\n' +
+                          '3. La API de Google Drive esté habilitada en tu proyecto de Google Cloud';
+            } else if (response.status === 404) {
+                errorMsg = '⚠️ Error 404: Archivo no encontrado. Verifica que el ID del archivo sea correcto.';
+            }
+            throw new Error(errorMsg);
+        }
+
         const arrayBuffer = await response.arrayBuffer();
         const workbook = XLSX.read(arrayBuffer, { type: 'array' });
 
@@ -555,13 +608,21 @@ async function syncFromDrive() {
         procesarDatos();
         document.getElementById('empty-resumen').style.display = 'none';
         
+        // Mostrar mensaje de éxito
+        btnText.innerHTML = '✅ Sincronizado';
+        setTimeout(() => {
+            if (!isSyncing) btnText.innerHTML = 'Sincronizar';
+        }, 3000);
+        
     } catch (err) {
-        alert('Error al sincronizar con Google Drive:\n' + err.message);
+        alert('Error al sincronizar con Google Drive:\n\n' + err.message);
         console.error(err);
     } finally {
         isSyncing = false;
         btn.disabled = false;
-        btnText.innerHTML = 'Sincronizar';
+        if (btnText.innerHTML !== '✅ Sincronizado') {
+            btnText.innerHTML = 'Sincronizar';
+        }
     }
 }
 
@@ -569,7 +630,14 @@ async function syncFromDrive() {
 // CARGA AUTOMÁTICA AL INICIAR
 // ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-    syncFromDrive();
+    // Verificar si hay API Key configurada
+    if (GOOGLE_DRIVE_API_KEY === 'TU_API_KEY' || GOOGLE_DRIVE_API_KEY === 'AIzaSyBv4WX-nmAv0gXQJh5m5b_eQkZNwQh9iRg') {
+        document.getElementById('api-notice').style.display = 'block';
+    } else {
+        document.getElementById('api-notice').style.display = 'none';
+        // Intentar sincronizar automáticamente
+        setTimeout(syncFromDrive, 500);
+    }
 });
 
 // ───────────────────────────────────────────────────────
