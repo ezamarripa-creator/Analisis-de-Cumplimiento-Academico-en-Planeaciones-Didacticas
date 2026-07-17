@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Cumplimiento Planeaciones – COBAED V6 (Google Drive)</title>
+    <title>Dashboard Cumplimiento Planeaciones – COBAED V6 (Excel Único)</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        /* ===== ESTILOS ===== */
+        /* ===== ESTILOS IDÉNTICOS AL ORIGINAL ===== */
         :root {
             --bg: #f0f2f7;
             --surface: #ffffff;
@@ -65,11 +65,13 @@
         }
         .btn-primary   { background: #2563eb; color: #fff; }
         .btn-primary:hover   { background: #1d4ed8; }
-        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
         .btn-success   { background: #059669; color: #fff; }
         .btn-success:hover   { background: #047857; }
         .btn-ghost     { background: transparent; color: #94a3b8; font-size: 1rem; padding: 6px 10px; }
         .btn-ghost:hover { color: #ef4444; }
+        .btn:disabled  { opacity: .7; cursor: not-allowed; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spinning { animation: spin 0.8s linear infinite; }
 
         .tabs-bar {
             background: var(--surface);
@@ -191,33 +193,6 @@
         .c50  { color: #f97316; }
         .c0   { color: var(--red); }
 
-        .spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 0.8s ease infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        .api-setup-notice {
-            background: #fef3c7;
-            border: 1px solid #f59e0b;
-            border-radius: 8px;
-            padding: 12px 16px;
-            margin-bottom: 16px;
-            color: #92400e;
-            font-size: 0.8rem;
-        }
-        .api-setup-notice code {
-            background: #fff;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-        }
-
         @media (max-width: 640px) {
             .header { padding: 16px; }
             .tab-content { padding: 16px 14px 40px; }
@@ -231,15 +206,15 @@
 <div class="header">
     <div class="header-left">
         <h1><i class="fas fa-file-excel" style="color:#34d399;margin-right:8px;"></i>Análisis de Cumplimiento en Planeaciones Didácticas</h1>
-        <p>Colegio de Bachilleres del Estado de Durango &nbsp;·&nbsp; Módulo de Visualización y Análisis &nbsp;<span style="color:#34d399;font-weight:700;">V6 (Google Drive API)</span></p>
+        <p>Colegio de Bachilleres del Estado de Durango &nbsp;·&nbsp; Módulo de Visualización y Análisis &nbsp;<span style="color:#34d399;font-weight:700;">V6 (Excel Único)</span></p>
         <div class="header-badge">
             <span>Planeaciones cargadas:</span>
             <span id="total-raw">0</span>
         </div>
     </div>
     <div class="header-actions">
-        <button class="btn btn-primary" onclick="syncFromDrive()" id="syncBtn">
-            <i class="fas fa-sync-alt"></i> <span id="syncBtnText">Sincronizar</span>
+        <button class="btn btn-primary" id="btn-sync" onclick="syncFromDrive()">
+            <i class="fas fa-sync-alt" id="sync-icon"></i> <span id="sync-label">Sincronizar</span>
         </button>
         <button class="btn btn-success" onclick="exportCSV()">
             <i class="fas fa-file-csv"></i> Exportar CSV
@@ -269,12 +244,6 @@
 
 <!-- ══════════════════ TAB: RESUMEN GENERAL ══════════════════ -->
 <div id="tab-resumen" class="tab-content active">
-    <div id="api-notice" class="api-setup-notice" style="display:none;">
-        <i class="fas fa-info-circle"></i> 
-        <strong>Configuración de API requerida:</strong> Para usar la sincronización con Google Drive, necesitas habilitar la 
-        <strong>Google Drive API</strong> en tu proyecto de Google Cloud.
-    </div>
-
     <div class="filters-bar">
         <div class="filter-group">
             <label>Plantel</label>
@@ -367,11 +336,10 @@
     </div>
 
     <div id="empty-resumen" class="empty-state">
-        <i class="fas fa-cloud-download-alt"></i>
-        <p>Presiona <b>"Sincronizar"</b> para cargar los datos desde Google Drive.<br>
-        El archivo debe contener una hoja con las columnas:<br>
-        <code>Estatus, #Planeacion, idPlantel, plantel, matricula, docente, idMateria, materia, semestre, turno, grupos, parcial, fec_elaboracion</code>
-        </p>
+        <i class="fas fa-file-excel"></i>
+        <p>Carga un archivo <b>Excel (.xlsx o .xls)</b> que contenga una hoja con las columnas:<br>
+        <code>Estatus, #Planeacion, idPlantel, plantel, matricula, docente, idMateria, materia, semestre, turno, grupos, parcial, fec_elaboracion</code><br>
+        <span style="font-size:0.7rem;color:#94a3b8;">La segunda hoja (datos2) se genera automáticamente a partir de los datos únicos de docentes y materias.</span></p>
     </div>
 </div>
 
@@ -495,62 +463,49 @@
 <!-- ═══════════════════════════ SCRIPTS ═══════════════════════════ -->
 <script>
 // ───────────────────────────────────────────────────────
-// CONFIGURACIÓN - TU API KEY YA ESTÁ PUESTA AQUÍ
-// ───────────────────────────────────────────────────────
-const GOOGLE_DRIVE_FILE_ID = '1eBwnD79L56hzToxuGb7BiECPkkxb3jrD';
-const GOOGLE_DRIVE_API_KEY = 'AIzaSyBJFzIy1CrNJHSbnvKw477JK30mOSpql3c'; // <-- TU API KEY
-
-const GOOGLE_DRIVE_API_URL = `https://www.googleapis.com/drive/v3/files/${GOOGLE_DRIVE_FILE_ID}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet&key=${GOOGLE_DRIVE_API_KEY}`;
-
-// ───────────────────────────────────────────────────────
 // ESTADO GLOBAL
 // ───────────────────────────────────────────────────────
-let rawData1 = [];
-let rawData2 = [];
-let cumplimientoData = [];
-let isSyncing = false;
+let rawData1 = [];   // datos1: planeaciones entregadas (de la hoja única)
+let rawData2 = [];   // datos2: catálogo generado a partir de los datos únicos
+let cumplimientoData = [];  // cruce calculado
 
 // ───────────────────────────────────────────────────────
-// SINCRONIZACIÓN CON GOOGLE DRIVE
+// SINCRONIZACIÓN CON GOOGLE DRIVE (Excel compartido) - UNA SOLA HOJA
 // ───────────────────────────────────────────────────────
+const DRIVE_FILE_ID = '1eBwnD79L56hzToxuGb7BiECPkkxb3jrD';
+const DRIVE_DOWNLOAD_URL = `https://drive.google.com/uc?export=download&id=${DRIVE_FILE_ID}`;
+
+function setSyncLoading(isLoading) {
+    const btn = document.getElementById('btn-sync');
+    const icon = document.getElementById('sync-icon');
+    const label = document.getElementById('sync-label');
+    btn.disabled = isLoading;
+    icon.classList.toggle('spinning', isLoading);
+    label.textContent = isLoading ? 'Sincronizando...' : 'Sincronizar';
+}
+
 async function syncFromDrive() {
-    if (isSyncing) return;
-    isSyncing = true;
-    const btn = document.getElementById('syncBtn');
-    const btnText = document.getElementById('syncBtnText');
-    btn.disabled = true;
-    btnText.innerHTML = '<span class="spinner"></span> Cargando...';
-
+    setSyncLoading(true);
     try {
-        const response = await fetch(GOOGLE_DRIVE_API_URL);
-        
-        if (!response.ok) {
-            let errorMsg = `Error HTTP: ${response.status}`;
-            if (response.status === 403) {
-                errorMsg = '⚠️ Error 403: La API Key no tiene permisos.\n\n' +
-                          'SOLUCIÓN:\n' +
-                          '1. Ve a https://console.cloud.google.com/apis/library\n' +
-                          '2. Busca y HABILITA "Google Drive API" (NO Analytics Hub)\n' +
-                          '3. En Credenciales, edita tu API Key y selecciona Google Drive API\n' +
-                          '4. Comparte el archivo como público en Google Drive';
-            } else if (response.status === 404) {
-                errorMsg = '⚠️ Error 404: Archivo no encontrado. Verifica el ID del archivo.';
-            }
-            throw new Error(errorMsg);
-        }
+        const resp = await fetch(DRIVE_DOWNLOAD_URL, { cache: 'no-store' });
+        if (!resp.ok) throw new Error(`No se pudo descargar el archivo (HTTP ${resp.status})`);
 
-        const arrayBuffer = await response.arrayBuffer();
-        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const buffer = await resp.arrayBuffer();
+        const data = new Uint8Array(buffer);
+        const workbook = XLSX.read(data, { type: 'array' });
 
+        // Tomar la primera hoja (asumimos que es la única)
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const raw = XLSX.utils.sheet_to_json(sheet);
 
         if (!raw || raw.length === 0) {
-            alert('El archivo Excel está vacío o no tiene datos.');
+            alert('El archivo de Google Drive está vacío o no tiene datos.');
             return;
         }
 
+        // === GENERAR datos1 (planeaciones) a partir de la hoja única ===
+        // Mapeamos columnas: Estatus, #Planeacion, idPlantel, plantel, matricula, docente, idMateria, materia, semestre, turno, grupos, parcial, fec_elaboracion
         rawData1 = raw.map(row => ({
             Estatus: row.Estatus || row['Estatus'] || '',
             '#Planeacion': row['#Planeacion'] || row['#planeacion'] || row['#Planeacion'] || '',
@@ -567,6 +522,9 @@ async function syncFromDrive() {
             fec_elaboracion: row.fec_elaboracion || row['fec_elaboracion'] || ''
         }));
 
+        // === GENERAR datos2 (catálogo) a partir de los datos únicos de datos1 ===
+        // Agrupamos por: idPlantel, plantel, matricula, docente, idMateria, materia, semestre, turno
+        // También necesitamos incluir Género, pero no viene en la hoja, lo dejamos vacío.
         const map = new Map();
         rawData1.forEach(row => {
             const key = `${row.idPlantel}|${row.matricula}|${row.idMateria}|${row.semestre}|${row.turno}`;
@@ -580,43 +538,30 @@ async function syncFromDrive() {
                     materia: row.materia || '',
                     semestre: row.semestre || '',
                     turno: row.turno || '',
-                    Genero: '',
+                    Genero: '', // no disponible
                     genero: ''
                 });
             }
         });
         rawData2 = Array.from(map.values());
 
+        // También necesitamos añadir las materias que no tienen entrega (pendientes) pero eso se maneja en el cruce
+        // Para el cruce, usaremos rawData2 como catálogo de obligaciones.
+
         document.getElementById('total-raw').innerText = rawData1.length;
         procesarDatos();
-        document.getElementById('empty-resumen').style.display = 'none';
-        
-        btnText.innerHTML = '✅ Sincronizado';
-        setTimeout(() => {
-            if (!isSyncing) btnText.innerHTML = 'Sincronizar';
-        }, 3000);
-        
-    } catch (err) {
-        alert('Error al sincronizar con Google Drive:\n\n' + err.message);
-        console.error(err);
+    } catch(err) {
+        alert('Error al sincronizar con Google Drive: ' + err.message + '\n\nVerifica que el archivo tenga acceso "Cualquier persona con el vínculo" y que la conexión a internet esté disponible.');
     } finally {
-        isSyncing = false;
-        btn.disabled = false;
-        if (btnText.innerHTML !== '✅ Sincronizado') {
-            btnText.innerHTML = 'Sincronizar';
-        }
+        setSyncLoading(false);
     }
 }
 
-// ───────────────────────────────────────────────────────
-// CARGA AUTOMÁTICA AL INICIAR
-// ───────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(syncFromDrive, 500);
-});
+// Sincroniza automáticamente al cargar la página
+document.addEventListener('DOMContentLoaded', syncFromDrive);
 
 // ───────────────────────────────────────────────────────
-// UTILIDADES SEGURAS
+// UTILIDADES SEGURAS (idénticas al original)
 // ───────────────────────────────────────────────────────
 function turnoTexto(t) {
     if (t === 1 || t === '1') return 'Mat';
@@ -626,9 +571,10 @@ function turnoTexto(t) {
 function safe(v) { return v == null ? '' : String(v).trim(); }
 
 // ───────────────────────────────────────────────────────
-// PROCESAMIENTO: CRUCE datos1 × datos2
+// PROCESAMIENTO: CRUCE datos1 × datos2 (generado)
 // ───────────────────────────────────────────────────────
 function procesarDatos() {
+    // Filtramos datos2 con docente válido
     const catalogo = rawData2.filter(cat => {
         const mat = cat.mat_doc ?? cat['mat_doc'];
         return mat && mat !== 0 && mat != null && (cat.nombre_doc ?? cat['nombre_doc']) != null;
@@ -636,6 +582,7 @@ function procesarDatos() {
 
     const PARCIALES = [1, 2, 3];
 
+    // Lookup de datos1 con claves flexibles
     const d1Lookup = {};
     rawData1.forEach(d => {
         const idPlantel = d.idPlantel ?? d['idPlantel'] ?? '';
@@ -666,6 +613,7 @@ function procesarDatos() {
             const key = `${no_plantel}|${mat_doc}|${cve_materia}|${semestre}|${turnoLabel}|${parcial}`;
             const entregadas = d1Lookup[key] || [];
 
+            // Deduplicar por #Planeacion
             const planesUnicos = [...new Map(entregadas.map(r => {
                 const id = r['#Planeacion'] ?? r['#planeacion'] ?? r['#Planeacion'] ?? '';
                 return [String(id), r];
@@ -694,6 +642,7 @@ function procesarDatos() {
         });
     });
 
+    // Poblar todos los filtros y tabs
     poblarFiltros();
     applyFilters();
     renderTabDocentes();
@@ -705,7 +654,7 @@ function procesarDatos() {
 }
 
 // ───────────────────────────────────────────────────────
-// POBLAR FILTROS
+// POBLAR FILTROS (idéntico)
 // ───────────────────────────────────────────────────────
 function uniqueSorted(arr) { return [...new Set(arr.map(v => String(v).trim()))].filter(Boolean).sort(); }
 
@@ -744,7 +693,7 @@ function setSelectOptions(id, values) {
 }
 
 // ───────────────────────────────────────────────────────
-// FILTROS PRINCIPALES
+// FILTROS PRINCIPALES (Resumen + gráficos)
 // ───────────────────────────────────────────────────────
 function getFilteredCumplimiento() {
     const fPlantel  = document.getElementById('f-plantel')?.value  || '';
@@ -771,7 +720,7 @@ function applyFilters() {
 }
 
 // ───────────────────────────────────────────────────────
-// ACTUALIZAR RESUMEN
+// ACTUALIZAR RESUMEN (idéntico)
 // ───────────────────────────────────────────────────────
 function updateResumen(data) {
     const esperadas   = data.length;
@@ -808,12 +757,13 @@ function updateResumen(data) {
 }
 
 // ───────────────────────────────────────────────────────
-// GRÁFICAS
+// GRÁFICAS (idénticas al original)
 // ───────────────────────────────────────────────────────
 function renderChartsResumen(data, pct) {
     const cfg = { responsive: true, displayModeBar: false };
     const layout0 = { margin:{t:20,b:30,l:30,r:20}, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{size:10}, showlegend:false };
 
+    // GAUGE
     Plotly.newPlot('chart-gauge', [{
         type: 'indicator', mode: 'gauge+number',
         value: pct,
@@ -831,6 +781,7 @@ function renderChartsResumen(data, pct) {
         }
     }], { ...layout0, margin:{t:50,b:20,l:30,r:30} }, cfg);
 
+    // PARCIAL
     const parMap = {};
     data.forEach(d => {
         const k = 'P' + d.parcial;
@@ -844,6 +795,7 @@ function renderChartsResumen(data, pct) {
         { name:'Entregadas', x:parKeys, y:parKeys.map(k=>parMap[k].ent), type:'bar', marker:{color:'#2563eb'} }
     ], { ...layout0, barmode:'group', showlegend:true, legend:{font:{size:9}}, yaxis:{gridcolor:'#f1f5f9'} }, cfg);
 
+    // SEMESTRE
     const semMap = {};
     data.forEach(d => {
         const k = d.semestre + 'º';
@@ -857,6 +809,7 @@ function renderChartsResumen(data, pct) {
         { name:'Entregadas', x:semKeys, y:semKeys.map(k=>semMap[k].ent), type:'bar', marker:{color:'#7c3aed'} }
     ], { ...layout0, barmode:'group', showlegend:true, legend:{font:{size:9}}, yaxis:{gridcolor:'#f1f5f9'} }, cfg);
 
+    // ESTATUS
     const estMap = {};
     data.forEach(d => {
         if (d.entrego) {
@@ -878,6 +831,7 @@ function renderChartsResumen(data, pct) {
         textfont: { size: 9 }
     }], { ...layout0, margin:{t:20,b:20,l:10,r:10}, showlegend:false }, cfg);
 
+    // PLANTEL
     const plMap = {};
     data.forEach(d => {
         const k = String(d.plantel).trim();
@@ -912,6 +866,7 @@ function renderChartsResumen(data, pct) {
         bargap: 0.35
     }, cfg);
 
+    // DOCENTES DIST
     const docMap = {};
     data.forEach(d => {
         const k = d.mat_doc;
@@ -938,7 +893,7 @@ function renderChartsResumen(data, pct) {
 }
 
 // ───────────────────────────────────────────────────────
-// TAB PLANTELES
+// TAB PLANTELES (idéntico)
 // ───────────────────────────────────────────────────────
 function renderTabPlanteles(data) {
     const plMap = {};
@@ -973,7 +928,7 @@ function renderTabPlanteles(data) {
 }
 
 // ───────────────────────────────────────────────────────
-// TAB DOCENTES
+// TAB DOCENTES (idéntico)
 // ───────────────────────────────────────────────────────
 function renderTabDocentes() {
     if (!cumplimientoData.length) return;
@@ -1029,7 +984,7 @@ function renderTabDocentes() {
 }
 
 // ───────────────────────────────────────────────────────
-// TAB DETALLE
+// TAB DETALLE (idéntico, adaptado campos flexibles)
 // ───────────────────────────────────────────────────────
 function renderTabDetalle() {
     if (!rawData1.length) return;
@@ -1098,7 +1053,7 @@ function renderTabDetalle() {
 }
 
 // ───────────────────────────────────────────────────────
-// TAB PENDIENTES
+// TAB PENDIENTES (idéntico)
 // ───────────────────────────────────────────────────────
 function renderTabPendientes() {
     if (!cumplimientoData.length) return;
@@ -1128,7 +1083,7 @@ function renderTabPendientes() {
 }
 
 // ───────────────────────────────────────────────────────
-// EXPORTAR CSV
+// EXPORTAR CSV (idéntico)
 // ───────────────────────────────────────────────────────
 function exportCSV() {
     const data = getFilteredCumplimiento();
