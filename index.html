@@ -9,7 +9,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        /* ===== ESTILOS IDÉNTICOS AL ORIGINAL ===== */
+        /* ===== ESTILOS ===== */
         :root {
             --bg: #f0f2f7;
             --surface: #ffffff;
@@ -202,7 +202,6 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Estilo para el mensaje de configuración de API */
         .api-setup-notice {
             background: #fef3c7;
             border: 1px solid #f59e0b;
@@ -270,13 +269,10 @@
 
 <!-- ══════════════════ TAB: RESUMEN GENERAL ══════════════════ -->
 <div id="tab-resumen" class="tab-content active">
-    <!-- Aviso de configuración de API -->
     <div id="api-notice" class="api-setup-notice" style="display:none;">
         <i class="fas fa-info-circle"></i> 
-        <strong>Configuración de API requerida:</strong> Para usar la sincronización con Google Drive, necesitas una 
-        <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:#2563eb;">clave de API de Google Drive</a>.
-        <br>
-        <span style="font-size:0.75rem;">Reemplaza <code>TU_API_KEY</code> en el código con tu clave de API.</span>
+        <strong>Configuración de API requerida:</strong> Para usar la sincronización con Google Drive, necesitas habilitar la 
+        <strong>Google Drive API</strong> en tu proyecto de Google Cloud.
     </div>
 
     <div class="filters-bar">
@@ -499,26 +495,23 @@
 <!-- ═══════════════════════════ SCRIPTS ═══════════════════════════ -->
 <script>
 // ───────────────────────────────────────────────────────
-// CONFIGURACIÓN - ¡IMPORTANTE! Reemplaza con tu API Key
+// CONFIGURACIÓN - TU API KEY YA ESTÁ PUESTA AQUÍ
 // ───────────────────────────────────────────────────────
 const GOOGLE_DRIVE_FILE_ID = '1eBwnD79L56hzToxuGb7BiECPkkxb3jrD';
-// OBTÉN TU API KEY EN: https://console.cloud.google.com/apis/credentials
-// Y reemplázala en la variable de abajo:
-const GOOGLE_DRIVE_API_KEY = 'AIzaSyBJFzIy1CrNJHSbnvKw477JK30mOSpql3c'; // <-- REEMPLAZA ESTO
+const GOOGLE_DRIVE_API_KEY = 'AIzaSyBJFzIy1CrNJHSbnvKw477JK30mOSpql3c'; // <-- TU API KEY
 
-// URL para usar la API de Google Drive
 const GOOGLE_DRIVE_API_URL = `https://www.googleapis.com/drive/v3/files/${GOOGLE_DRIVE_FILE_ID}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet&key=${GOOGLE_DRIVE_API_KEY}`;
 
 // ───────────────────────────────────────────────────────
 // ESTADO GLOBAL
 // ───────────────────────────────────────────────────────
-let rawData1 = [];   // datos1: planeaciones entregadas (de la hoja única)
-let rawData2 = [];   // datos2: catálogo generado a partir de los datos únicos
-let cumplimientoData = [];  // cruce calculado
+let rawData1 = [];
+let rawData2 = [];
+let cumplimientoData = [];
 let isSyncing = false;
 
 // ───────────────────────────────────────────────────────
-// SINCRONIZACIÓN CON GOOGLE DRIVE USANDO API
+// SINCRONIZACIÓN CON GOOGLE DRIVE
 // ───────────────────────────────────────────────────────
 async function syncFromDrive() {
     if (isSyncing) return;
@@ -529,26 +522,19 @@ async function syncFromDrive() {
     btnText.innerHTML = '<span class="spinner"></span> Cargando...';
 
     try {
-        // Mostrar mensaje si no hay API Key configurada
-        if (GOOGLE_DRIVE_API_KEY === 'TU_API_KEY' || GOOGLE_DRIVE_API_KEY === 'AIzaSyBv4WX-nmAv0gXQJh5m5b_eQkZNwQh9iRg') {
-            document.getElementById('api-notice').style.display = 'block';
-            throw new Error('⚠️ Necesitas configurar una API Key de Google Drive. Reemplaza GOOGLE_DRIVE_API_KEY en el código.');
-        } else {
-            document.getElementById('api-notice').style.display = 'none';
-        }
-
-        // Descargar archivo usando la API de Google Drive
         const response = await fetch(GOOGLE_DRIVE_API_URL);
         
         if (!response.ok) {
             let errorMsg = `Error HTTP: ${response.status}`;
             if (response.status === 403) {
-                errorMsg = '⚠️ Error 403: La API Key no tiene permisos para acceder a este archivo. Verifica que:\n' +
-                          '1. La API Key sea correcta\n' +
-                          '2. El archivo sea público o esté compartido\n' +
-                          '3. La API de Google Drive esté habilitada en tu proyecto de Google Cloud';
+                errorMsg = '⚠️ Error 403: La API Key no tiene permisos.\n\n' +
+                          'SOLUCIÓN:\n' +
+                          '1. Ve a https://console.cloud.google.com/apis/library\n' +
+                          '2. Busca y HABILITA "Google Drive API" (NO Analytics Hub)\n' +
+                          '3. En Credenciales, edita tu API Key y selecciona Google Drive API\n' +
+                          '4. Comparte el archivo como público en Google Drive';
             } else if (response.status === 404) {
-                errorMsg = '⚠️ Error 404: Archivo no encontrado. Verifica que el ID del archivo sea correcto.';
+                errorMsg = '⚠️ Error 404: Archivo no encontrado. Verifica el ID del archivo.';
             }
             throw new Error(errorMsg);
         }
@@ -556,7 +542,6 @@ async function syncFromDrive() {
         const arrayBuffer = await response.arrayBuffer();
         const workbook = XLSX.read(arrayBuffer, { type: 'array' });
 
-        // Tomar la primera hoja (asumimos que es la única)
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const raw = XLSX.utils.sheet_to_json(sheet);
@@ -566,7 +551,6 @@ async function syncFromDrive() {
             return;
         }
 
-        // === GENERAR datos1 (planeaciones) a partir de la hoja única ===
         rawData1 = raw.map(row => ({
             Estatus: row.Estatus || row['Estatus'] || '',
             '#Planeacion': row['#Planeacion'] || row['#planeacion'] || row['#Planeacion'] || '',
@@ -583,7 +567,6 @@ async function syncFromDrive() {
             fec_elaboracion: row.fec_elaboracion || row['fec_elaboracion'] || ''
         }));
 
-        // === GENERAR datos2 (catálogo) a partir de los datos únicos de datos1 ===
         const map = new Map();
         rawData1.forEach(row => {
             const key = `${row.idPlantel}|${row.matricula}|${row.idMateria}|${row.semestre}|${row.turno}`;
@@ -608,7 +591,6 @@ async function syncFromDrive() {
         procesarDatos();
         document.getElementById('empty-resumen').style.display = 'none';
         
-        // Mostrar mensaje de éxito
         btnText.innerHTML = '✅ Sincronizado';
         setTimeout(() => {
             if (!isSyncing) btnText.innerHTML = 'Sincronizar';
@@ -630,18 +612,11 @@ async function syncFromDrive() {
 // CARGA AUTOMÁTICA AL INICIAR
 // ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-    // Verificar si hay API Key configurada
-    if (GOOGLE_DRIVE_API_KEY === 'TU_API_KEY' || GOOGLE_DRIVE_API_KEY === 'AIzaSyBv4WX-nmAv0gXQJh5m5b_eQkZNwQh9iRg') {
-        document.getElementById('api-notice').style.display = 'block';
-    } else {
-        document.getElementById('api-notice').style.display = 'none';
-        // Intentar sincronizar automáticamente
-        setTimeout(syncFromDrive, 500);
-    }
+    setTimeout(syncFromDrive, 500);
 });
 
 // ───────────────────────────────────────────────────────
-// UTILIDADES SEGURAS (idénticas al original)
+// UTILIDADES SEGURAS
 // ───────────────────────────────────────────────────────
 function turnoTexto(t) {
     if (t === 1 || t === '1') return 'Mat';
@@ -651,10 +626,9 @@ function turnoTexto(t) {
 function safe(v) { return v == null ? '' : String(v).trim(); }
 
 // ───────────────────────────────────────────────────────
-// PROCESAMIENTO: CRUCE datos1 × datos2 (generado)
+// PROCESAMIENTO: CRUCE datos1 × datos2
 // ───────────────────────────────────────────────────────
 function procesarDatos() {
-    // Filtramos datos2 con docente válido
     const catalogo = rawData2.filter(cat => {
         const mat = cat.mat_doc ?? cat['mat_doc'];
         return mat && mat !== 0 && mat != null && (cat.nombre_doc ?? cat['nombre_doc']) != null;
@@ -662,7 +636,6 @@ function procesarDatos() {
 
     const PARCIALES = [1, 2, 3];
 
-    // Lookup de datos1 con claves flexibles
     const d1Lookup = {};
     rawData1.forEach(d => {
         const idPlantel = d.idPlantel ?? d['idPlantel'] ?? '';
@@ -693,7 +666,6 @@ function procesarDatos() {
             const key = `${no_plantel}|${mat_doc}|${cve_materia}|${semestre}|${turnoLabel}|${parcial}`;
             const entregadas = d1Lookup[key] || [];
 
-            // Deduplicar por #Planeacion
             const planesUnicos = [...new Map(entregadas.map(r => {
                 const id = r['#Planeacion'] ?? r['#planeacion'] ?? r['#Planeacion'] ?? '';
                 return [String(id), r];
@@ -722,7 +694,6 @@ function procesarDatos() {
         });
     });
 
-    // Poblar todos los filtros y tabs
     poblarFiltros();
     applyFilters();
     renderTabDocentes();
@@ -734,7 +705,7 @@ function procesarDatos() {
 }
 
 // ───────────────────────────────────────────────────────
-// POBLAR FILTROS (idéntico)
+// POBLAR FILTROS
 // ───────────────────────────────────────────────────────
 function uniqueSorted(arr) { return [...new Set(arr.map(v => String(v).trim()))].filter(Boolean).sort(); }
 
@@ -773,7 +744,7 @@ function setSelectOptions(id, values) {
 }
 
 // ───────────────────────────────────────────────────────
-// FILTROS PRINCIPALES (Resumen + gráficos)
+// FILTROS PRINCIPALES
 // ───────────────────────────────────────────────────────
 function getFilteredCumplimiento() {
     const fPlantel  = document.getElementById('f-plantel')?.value  || '';
@@ -800,7 +771,7 @@ function applyFilters() {
 }
 
 // ───────────────────────────────────────────────────────
-// ACTUALIZAR RESUMEN (idéntico)
+// ACTUALIZAR RESUMEN
 // ───────────────────────────────────────────────────────
 function updateResumen(data) {
     const esperadas   = data.length;
@@ -837,13 +808,12 @@ function updateResumen(data) {
 }
 
 // ───────────────────────────────────────────────────────
-// GRÁFICAS (idénticas al original)
+// GRÁFICAS
 // ───────────────────────────────────────────────────────
 function renderChartsResumen(data, pct) {
     const cfg = { responsive: true, displayModeBar: false };
     const layout0 = { margin:{t:20,b:30,l:30,r:20}, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{size:10}, showlegend:false };
 
-    // GAUGE
     Plotly.newPlot('chart-gauge', [{
         type: 'indicator', mode: 'gauge+number',
         value: pct,
@@ -861,7 +831,6 @@ function renderChartsResumen(data, pct) {
         }
     }], { ...layout0, margin:{t:50,b:20,l:30,r:30} }, cfg);
 
-    // PARCIAL
     const parMap = {};
     data.forEach(d => {
         const k = 'P' + d.parcial;
@@ -875,7 +844,6 @@ function renderChartsResumen(data, pct) {
         { name:'Entregadas', x:parKeys, y:parKeys.map(k=>parMap[k].ent), type:'bar', marker:{color:'#2563eb'} }
     ], { ...layout0, barmode:'group', showlegend:true, legend:{font:{size:9}}, yaxis:{gridcolor:'#f1f5f9'} }, cfg);
 
-    // SEMESTRE
     const semMap = {};
     data.forEach(d => {
         const k = d.semestre + 'º';
@@ -889,7 +857,6 @@ function renderChartsResumen(data, pct) {
         { name:'Entregadas', x:semKeys, y:semKeys.map(k=>semMap[k].ent), type:'bar', marker:{color:'#7c3aed'} }
     ], { ...layout0, barmode:'group', showlegend:true, legend:{font:{size:9}}, yaxis:{gridcolor:'#f1f5f9'} }, cfg);
 
-    // ESTATUS
     const estMap = {};
     data.forEach(d => {
         if (d.entrego) {
@@ -911,7 +878,6 @@ function renderChartsResumen(data, pct) {
         textfont: { size: 9 }
     }], { ...layout0, margin:{t:20,b:20,l:10,r:10}, showlegend:false }, cfg);
 
-    // PLANTEL
     const plMap = {};
     data.forEach(d => {
         const k = String(d.plantel).trim();
@@ -946,7 +912,6 @@ function renderChartsResumen(data, pct) {
         bargap: 0.35
     }, cfg);
 
-    // DOCENTES DIST
     const docMap = {};
     data.forEach(d => {
         const k = d.mat_doc;
@@ -973,7 +938,7 @@ function renderChartsResumen(data, pct) {
 }
 
 // ───────────────────────────────────────────────────────
-// TAB PLANTELES (idéntico)
+// TAB PLANTELES
 // ───────────────────────────────────────────────────────
 function renderTabPlanteles(data) {
     const plMap = {};
@@ -1008,7 +973,7 @@ function renderTabPlanteles(data) {
 }
 
 // ───────────────────────────────────────────────────────
-// TAB DOCENTES (idéntico)
+// TAB DOCENTES
 // ───────────────────────────────────────────────────────
 function renderTabDocentes() {
     if (!cumplimientoData.length) return;
@@ -1064,7 +1029,7 @@ function renderTabDocentes() {
 }
 
 // ───────────────────────────────────────────────────────
-// TAB DETALLE (idéntico, adaptado campos flexibles)
+// TAB DETALLE
 // ───────────────────────────────────────────────────────
 function renderTabDetalle() {
     if (!rawData1.length) return;
@@ -1133,7 +1098,7 @@ function renderTabDetalle() {
 }
 
 // ───────────────────────────────────────────────────────
-// TAB PENDIENTES (idéntico)
+// TAB PENDIENTES
 // ───────────────────────────────────────────────────────
 function renderTabPendientes() {
     if (!cumplimientoData.length) return;
@@ -1163,7 +1128,7 @@ function renderTabPendientes() {
 }
 
 // ───────────────────────────────────────────────────────
-// EXPORTAR CSV (idéntico)
+// EXPORTAR CSV
 // ───────────────────────────────────────────────────────
 function exportCSV() {
     const data = getFilteredCumplimiento();
