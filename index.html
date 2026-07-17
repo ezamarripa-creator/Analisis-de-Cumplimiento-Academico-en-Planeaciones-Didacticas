@@ -1,51 +1,15 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-
-
-    <script>
-    (function() {
-        document.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
-            return false;
-        });
-      
-       document.addEventListener('keydown', function(e) {
-            const key = e.key.toLowerCase();
-            if ((e.ctrlKey && (key === 'u' || key === 's' || key === 'c' || key === 'i' || key === 'j')) ||
-                (e.ctrlKey && e.shiftKey && (key === 'i' || key === 'j' || key === 'c')) ||
-                e.key === 'F12') {
-                e.preventDefault();
-                return false;
-            }
-        });
-        
-        let devtoolsTriggered = false;
-        setInterval(function() {
-            if (devtoolsTriggered) return;
-            const before = new Date();
-            debugger; 
-            const after = new Date();
-            if (after - before > 100) { 
-                devtoolsTriggered = true;
-                document.body.innerHTML = '<div style="text-align:center; padding:50px; font-family:sans-serif;"><h1 style="color:#042C53;">⚠️ Acceso no autorizado</h1><p>El uso de herramientas de desarrollo no está permitido en este recurso institucional.</p><p style="font-size:14px; margin-top:30px;">🔒 COBAED · Dirección Académica</p></div>';
-            }
-        }, 2000);
-        
-        const style = document.createElement('style');
-        style.textContent = `body { user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; }`;
-        document.head.appendChild(style);
-    })();
-    </script>
-
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Cumplimiento Planeaciones – COBAED V5</title>
+    <title>Dashboard Cumplimiento Planeaciones – COBAED V6 (Google Drive)</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
+        /* ===== ESTILOS IDÉNTICOS AL ORIGINAL ===== */
         :root {
             --bg: #f0f2f7;
             --surface: #ffffff;
@@ -71,11 +35,9 @@
             --font: 'DM Sans', sans-serif;
             --mono: 'DM Mono', monospace;
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
 
-        /* ── HEADER ── */
         .header {
             background: var(--header-bg);
             padding: 20px 28px;
@@ -108,7 +70,6 @@
         .btn-ghost     { background: transparent; color: #94a3b8; font-size: 1rem; padding: 6px 10px; }
         .btn-ghost:hover { color: #ef4444; }
 
-        /* ── TABS ── */
         .tabs-bar {
             background: var(--surface);
             border-bottom: 1px solid var(--border);
@@ -128,7 +89,6 @@
         .tab-content { display: none; padding: 24px 24px 40px; }
         .tab-content.active { display: block; }
 
-        /* ── FILTERS ── */
         .filters-bar {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -144,7 +104,7 @@
             font-size: 0.62rem; font-weight: 800; text-transform: uppercase;
             letter-spacing: .07em; color: var(--text3);
         }
-        .filter-group select {
+        .filter-group select, .filter-group input[type=text] {
             background: var(--surface2); border: 1px solid var(--border);
             border-radius: 6px; padding: 7px 10px; font-size: 0.75rem;
             color: var(--text); font-family: var(--font); cursor: pointer;
@@ -153,15 +113,9 @@
             background-position: right 8px center; background-repeat: no-repeat; background-size: 1.2em;
             padding-right: 28px;
         }
-        .filter-group select:focus { outline: 2px solid var(--accent); }
-        .filter-group input[type=text] {
-            background: var(--surface2); border: 1px solid var(--border);
-            border-radius: 6px; padding: 7px 10px; font-size: 0.75rem;
-            color: var(--text); font-family: var(--font);
-        }
-        .filter-group input:focus { outline: 2px solid var(--accent); }
+        .filter-group select:focus, .filter-group input:focus { outline: 2px solid var(--accent); }
+        .filter-group input[type=text] { appearance: auto; background-image: none; padding-right: 10px; }
 
-        /* ── KPI CARDS ── */
         .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; margin-bottom: 22px; }
         .kpi-card {
             background: var(--surface); border: 1px solid var(--border);
@@ -177,7 +131,6 @@
         .kpi-card.red   { border-bottom-color: #ef4444; }
         .kpi-card.teal  { border-bottom-color: #14b8a6; }
 
-        /* ── CHARTS GRID ── */
         .charts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 22px; }
         .chart-card {
             background: var(--surface); border: 1px solid var(--border);
@@ -185,7 +138,6 @@
         }
         .chart-card h4 { font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--text3); margin-bottom: 10px; text-align: center; }
 
-        /* ── TABLES ── */
         .table-wrap {
             background: var(--surface); border: 1px solid var(--border);
             border-radius: 12px; overflow: hidden;
@@ -215,7 +167,6 @@
         tbody td { padding: 10px 14px; color: var(--text); vertical-align: middle; }
         td.mono { font-family: var(--mono); color: var(--text2); font-size: 0.72rem; }
 
-        /* ── BADGES ── */
         .badge {
             display: inline-block; padding: 3px 9px; border-radius: 20px;
             font-size: 0.63rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em;
@@ -226,25 +177,29 @@
         .badge-blue   { background: var(--blue-bg);  color: var(--blue-text);  }
         .badge-gray   { background: #f1f5f9; color: #64748b; }
 
-        /* ── PROGRESS BAR ── */
         .progress-bar { background: #e2e8f0; border-radius: 4px; height: 8px; overflow: hidden; }
         .progress-bar-fill { height: 100%; border-radius: 4px; transition: width .4s; }
 
-        /* ── EMPTY STATE ── */
         .empty-state { text-align: center; padding: 60px 20px; color: var(--text3); }
         .empty-state i { font-size: 2.5rem; margin-bottom: 12px; }
         .empty-state p { font-size: 0.82rem; }
-        .empty-state .loader { display: inline-block; width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 16px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* ── SECTION TITLE ── */
         .section-title { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--text3); margin-bottom: 12px; }
-
-        /* ── CUMPLIMIENTO COLOR ── */
         .c100 { color: var(--green); }
         .c75  { color: var(--amber); }
         .c50  { color: #f97316; }
         .c0   { color: var(--red); }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s ease infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         @media (max-width: 640px) {
             .header { padding: 16px; }
@@ -258,14 +213,17 @@
 <!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
 <div class="header">
     <div class="header-left">
-        <h1><i class="fas fa-chart-pie" style="color:#34d399;margin-right:8px;"></i>Análisis de Cumplimiento en Planeaciones Didácticas</h1>
-        <p>Colegio de Bachilleres del Estado de Durango &nbsp;·&nbsp; Módulo de Visualización y Análisis &nbsp;<span style="color:#34d399;font-weight:700;">V5</span></p>
+        <h1><i class="fas fa-file-excel" style="color:#34d399;margin-right:8px;"></i>Análisis de Cumplimiento en Planeaciones Didácticas</h1>
+        <p>Colegio de Bachilleres del Estado de Durango &nbsp;·&nbsp; Módulo de Visualización y Análisis &nbsp;<span style="color:#34d399;font-weight:700;">V6 (Google Drive)</span></p>
         <div class="header-badge">
             <span>Planeaciones cargadas:</span>
             <span id="total-raw">0</span>
         </div>
     </div>
     <div class="header-actions">
+        <button class="btn btn-primary" onclick="syncFromDrive()" id="syncBtn">
+            <i class="fas fa-sync-alt"></i> <span id="syncBtnText">Sincronizar</span>
+        </button>
         <button class="btn btn-success" onclick="exportCSV()">
             <i class="fas fa-file-csv"></i> Exportar CSV
         </button>
@@ -294,8 +252,6 @@
 
 <!-- ══════════════════ TAB: RESUMEN GENERAL ══════════════════ -->
 <div id="tab-resumen" class="tab-content active">
-
-    <!-- Filtros -->
     <div class="filters-bar">
         <div class="filter-group">
             <label>Plantel</label>
@@ -323,7 +279,6 @@
         </div>
     </div>
 
-    <!-- KPIs -->
     <div class="kpi-grid">
         <div class="kpi-card blue">
             <p>Materias-Docente Esperadas</p>
@@ -360,8 +315,6 @@
         </div>
     </div>
 
-    <!-- Charts -->
-    <!-- CHART PLANTEL: full width -->
     <div class="chart-card" style="margin-bottom:16px;">
         <h4>% Cumplimiento por Plantel</h4>
         <div id="chart-plantel" style="height:420px;min-height:360px;"></div>
@@ -391,8 +344,11 @@
     </div>
 
     <div id="empty-resumen" class="empty-state">
-        <div class="loader"></div>
-        <p>Cargando datos desde el repositorio...<br><small><code>datos.json</code></small></p>
+        <i class="fas fa-cloud-download-alt"></i>
+        <p>Presiona <b>"Sincronizar"</b> para cargar los datos desde Google Drive.<br>
+        El archivo debe contener una hoja con las columnas:<br>
+        <code>Estatus, #Planeacion, idPlantel, plantel, matricula, docente, idMateria, materia, semestre, turno, grupos, parcial, fec_elaboracion</code>
+        </p>
     </div>
 </div>
 
@@ -407,16 +363,7 @@
         <div class="table-scroll">
             <table>
                 <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Plantel</th>
-                        <th>Esperadas</th>
-                        <th>Entregadas</th>
-                        <th>Pendientes</th>
-                        <th>% Cumplimiento</th>
-                        <th>Progreso</th>
-                        <th>Docentes</th>
-                    </tr>
+                    <tr><th>ID</th><th>Plantel</th><th>Esperadas</th><th>Entregadas</th><th>Pendientes</th><th>% Cumplimiento</th><th>Progreso</th><th>Docentes</th></tr>
                 </thead>
                 <tbody id="tbody-planteles"></tbody>
             </table>
@@ -462,16 +409,7 @@
         <div class="table-scroll">
             <table>
                 <thead>
-                    <tr>
-                        <th>Matrícula</th>
-                        <th>Docente</th>
-                        <th>Género</th>
-                        <th>Plantel</th>
-                        <th>Materias Esperadas</th>
-                        <th>Materias Entregadas</th>
-                        <th>% Cumplimiento</th>
-                        <th>Progreso</th>
-                    </tr>
+                    <tr><th>Matrícula</th><th>Docente</th><th>Género</th><th>Plantel</th><th>Materias Esperadas</th><th>Materias Entregadas</th><th>% Cumplimiento</th><th>Progreso</th></tr>
                 </thead>
                 <tbody id="tbody-docentes"></tbody>
             </table>
@@ -483,30 +421,12 @@
 <div id="tab-detalle" class="tab-content">
     <p class="section-title">Todos los registros de planeaciones entregadas (datos1)</p>
     <div class="filters-bar" style="margin-bottom:16px;">
-        <div class="filter-group">
-            <label>Plantel</label>
-            <select id="fd-plantel" onchange="renderTabDetalle()"><option value="">Todos</option></select>
-        </div>
-        <div class="filter-group">
-            <label>Turno</label>
-            <select id="fd-turno" onchange="renderTabDetalle()"><option value="">Todos</option></select>
-        </div>
-        <div class="filter-group">
-            <label>Semestre</label>
-            <select id="fd-semestre" onchange="renderTabDetalle()"><option value="">Todos</option></select>
-        </div>
-        <div class="filter-group">
-            <label>Parcial</label>
-            <select id="fd-parcial" onchange="renderTabDetalle()"><option value="">Todos</option></select>
-        </div>
-        <div class="filter-group">
-            <label>Estatus</label>
-            <select id="fd-estatus" onchange="renderTabDetalle()"><option value="">Todos</option></select>
-        </div>
-        <div class="filter-group">
-            <label>Buscar docente</label>
-            <input type="text" id="fd-docente" placeholder="Nombre..." oninput="renderTabDetalle()">
-        </div>
+        <div class="filter-group"><label>Plantel</label><select id="fd-plantel" onchange="renderTabDetalle()"><option value="">Todos</option></select></div>
+        <div class="filter-group"><label>Turno</label><select id="fd-turno" onchange="renderTabDetalle()"><option value="">Todos</option></select></div>
+        <div class="filter-group"><label>Semestre</label><select id="fd-semestre" onchange="renderTabDetalle()"><option value="">Todos</option></select></div>
+        <div class="filter-group"><label>Parcial</label><select id="fd-parcial" onchange="renderTabDetalle()"><option value="">Todos</option></select></div>
+        <div class="filter-group"><label>Estatus</label><select id="fd-estatus" onchange="renderTabDetalle()"><option value="">Todos</option></select></div>
+        <div class="filter-group"><label>Buscar docente</label><input type="text" id="fd-docente" placeholder="Nombre..." oninput="renderTabDetalle()"></div>
     </div>
     <div class="table-wrap">
         <div class="table-header">
@@ -516,17 +436,7 @@
         <div class="table-scroll">
             <table>
                 <thead>
-                    <tr>
-                        <th>#Plan</th>
-                        <th>Plantel</th>
-                        <th>Docente</th>
-                        <th>Materia</th>
-                        <th>Estatus</th>
-                        <th>Sem/Turno</th>
-                        <th>Grupos</th>
-                        <th>Parcial</th>
-                        <th>F. Elaboración</th>
-                    </tr>
+                    <tr><th>#Plan</th><th>Plantel</th><th>Docente</th><th>Materia</th><th>Estatus</th><th>Sem/Turno</th><th>Grupos</th><th>Parcial</th><th>F. Elaboración</th></tr>
                 </thead>
                 <tbody id="tbody-detalle"></tbody>
             </table>
@@ -538,22 +448,10 @@
 <div id="tab-pendientes" class="tab-content">
     <p class="section-title">Materias-Docente sin ninguna planeación entregada</p>
     <div class="filters-bar" style="margin-bottom:16px;">
-        <div class="filter-group">
-            <label>Plantel</label>
-            <select id="fp-plantel" onchange="renderTabPendientes()"><option value="">Todos</option></select>
-        </div>
-        <div class="filter-group">
-            <label>Semestre</label>
-            <select id="fp-semestre" onchange="renderTabPendientes()"><option value="">Todos</option></select>
-        </div>
-        <div class="filter-group">
-            <label>Turno</label>
-            <select id="fp-turno" onchange="renderTabPendientes()"><option value="">Todos</option></select>
-        </div>
-        <div class="filter-group">
-            <label>Buscar docente</label>
-            <input type="text" id="fp-docente" placeholder="Nombre..." oninput="renderTabPendientes()">
-        </div>
+        <div class="filter-group"><label>Plantel</label><select id="fp-plantel" onchange="renderTabPendientes()"><option value="">Todos</option></select></div>
+        <div class="filter-group"><label>Semestre</label><select id="fp-semestre" onchange="renderTabPendientes()"><option value="">Todos</option></select></div>
+        <div class="filter-group"><label>Turno</label><select id="fp-turno" onchange="renderTabPendientes()"><option value="">Todos</option></select></div>
+        <div class="filter-group"><label>Buscar docente</label><input type="text" id="fp-docente" placeholder="Nombre..." oninput="renderTabPendientes()"></div>
     </div>
     <div class="table-wrap">
         <div class="table-header">
@@ -563,16 +461,7 @@
         <div class="table-scroll">
             <table>
                 <thead>
-                    <tr>
-                        <th>Matrícula</th>
-                        <th>Docente</th>
-                        <th>Género</th>
-                        <th>Plantel</th>
-                        <th>Materia (Catálogo)</th>
-                        <th>Cve. Materia</th>
-                        <th>Semestre</th>
-                        <th>Turno</th>
-                    </tr>
+                    <tr><th>Matrícula</th><th>Docente</th><th>Género</th><th>Plantel</th><th>Materia (Catálogo)</th><th>Cve. Materia</th><th>Semestre</th><th>Turno</th></tr>
                 </thead>
                 <tbody id="tbody-pendientes"></tbody>
             </table>
@@ -583,138 +472,189 @@
 <!-- ═══════════════════════════ SCRIPTS ═══════════════════════════ -->
 <script>
 // ───────────────────────────────────────────────────────
-// CONFIGURACIÓN: DATOS DESDE REPOSITORIO GITHUB
+// CONFIGURACIÓN
 // ───────────────────────────────────────────────────────
-const GITHUB_DATA_URL = 'datos.json'; // Busca el archivo en la misma carpeta del sitio/repositorio
+const GOOGLE_DRIVE_FILE_ID = '1eBwnD79L56hzToxuGb7BiECPkkxb3jrD';
+const GOOGLE_DRIVE_EXPORT_URL = `https://drive.google.com/uc?export=download&id=${GOOGLE_DRIVE_FILE_ID}`;
 
 // ───────────────────────────────────────────────────────
 // ESTADO GLOBAL
 // ───────────────────────────────────────────────────────
-let rawData1 = [];   // datos1: planeaciones entregadas
-let rawData2 = [];   // datos2: catálogo de obligaciones
+let rawData1 = [];   // datos1: planeaciones entregadas (de la hoja única)
+let rawData2 = [];   // datos2: catálogo generado a partir de los datos únicos
 let cumplimientoData = [];  // cruce calculado
+let isSyncing = false;
 
 // ───────────────────────────────────────────────────────
-// CARGA AUTOMÁTICA DESDE GITHUB
+// SINCRONIZACIÓN CON GOOGLE DRIVE
 // ───────────────────────────────────────────────────────
-async function cargarDatosDesdeGitHub() {
-    const emptyDiv = document.getElementById('empty-resumen');
-    emptyDiv.style.display = 'flex';
-    emptyDiv.style.flexDirection = 'column';
-    emptyDiv.style.alignItems = 'center';
-    emptyDiv.style.justifyContent = 'center';
-    emptyDiv.innerHTML = '<div class="loader"></div><p>Cargando datos desde el repositorio...<br><small><code>datos.json</code></small></p>';
-    
+async function syncFromDrive() {
+    if (isSyncing) return;
+    isSyncing = true;
+    const btn = document.getElementById('syncBtn');
+    const btnText = document.getElementById('syncBtnText');
+    btn.disabled = true;
+    btnText.innerHTML = '<span class="spinner"></span> Cargando...';
+
     try {
-        // Agregar timestamp para evitar caché
-        const url = `${GITHUB_DATA_URL}?t=${Date.now()}`;
-        const response = await fetch(url);
+        const response = await fetch(GOOGLE_DRIVE_EXPORT_URL);
+        if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
         
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const arrayBuffer = await response.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+
+        // Tomar la primera hoja (asumimos que es la única)
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const raw = XLSX.utils.sheet_to_json(sheet);
+
+        if (!raw || raw.length === 0) {
+            alert('El archivo Excel está vacío o no tiene datos.');
+            return;
         }
-        
-        const json = await response.json();
-        
-        if (!json.datos1 || !json.datos2) {
-            throw new Error('El archivo JSON debe contener las secciones "datos1" y "datos2".');
-        }
-        
-        rawData1 = json.datos1;
-        rawData2 = json.datos2;
-        
+
+        // === GENERAR datos1 (planeaciones) a partir de la hoja única ===
+        rawData1 = raw.map(row => ({
+            Estatus: row.Estatus || row['Estatus'] || '',
+            '#Planeacion': row['#Planeacion'] || row['#planeacion'] || row['#Planeacion'] || '',
+            idPlantel: row.idPlantel || row['idPlantel'] || '',
+            plantel: row.plantel || row['plantel'] || '',
+            matricula: row.matricula || row['matricula'] || '',
+            docente: row.docente || row['docente'] || '',
+            idMateria: row.idMateria || row['idMateria'] || '',
+            materia: row.materia || row['materia'] || '',
+            semestre: row.semestre || row['semestre'] || '',
+            turno: row.turno || row['turno'] || '',
+            grupos: row.grupos || row['grupos'] || '',
+            parcial: row.parcial || row['parcial'] || '',
+            fec_elaboracion: row.fec_elaboracion || row['fec_elaboracion'] || ''
+        }));
+
+        // === GENERAR datos2 (catálogo) a partir de los datos únicos de datos1 ===
+        const map = new Map();
+        rawData1.forEach(row => {
+            const key = `${row.idPlantel}|${row.matricula}|${row.idMateria}|${row.semestre}|${row.turno}`;
+            if (!map.has(key)) {
+                map.set(key, {
+                    no_plantel: row.idPlantel || '',
+                    plantel: row.plantel || '',
+                    mat_doc: row.matricula || '',
+                    nombre_doc: row.docente || '',
+                    cve_materia: row.idMateria || '',
+                    materia: row.materia || '',
+                    semestre: row.semestre || '',
+                    turno: row.turno || '',
+                    Genero: '',
+                    genero: ''
+                });
+            }
+        });
+        rawData2 = Array.from(map.values());
+
         document.getElementById('total-raw').innerText = rawData1.length;
-        
         procesarDatos();
+        document.getElementById('empty-resumen').style.display = 'none';
         
-        emptyDiv.style.display = 'none';
-        
-    } catch(err) {
-        console.error('Error al cargar datos:', err);
-        emptyDiv.innerHTML = `
-            <i class="fas fa-exclamation-triangle" style="font-size: 2.5rem; color: #dc2626;"></i>
-            <p style="color: #dc2626; font-weight: 700;">Error al cargar los datos</p>
-            <p style="font-size: 0.75rem;">${err.message}</p>
-            <button class="btn btn-primary" style="margin-top: 16px;" onclick="cargarDatosDesdeGitHub()">
-                <i class="fas fa-sync-alt"></i> Reintentar
-            </button>
-        `;
-        emptyDiv.style.display = 'flex';
+    } catch (err) {
+        alert('Error al sincronizar con Google Drive:\n' + err.message);
+        console.error(err);
+    } finally {
+        isSyncing = false;
+        btn.disabled = false;
+        btnText.innerHTML = 'Sincronizar';
     }
 }
 
 // ───────────────────────────────────────────────────────
-// UTILIDADES SEGURAS
+// CARGA AUTOMÁTICA AL INICIAR
 // ───────────────────────────────────────────────────────
-// Convierte turno numérico (datos2) a texto legible
+document.addEventListener('DOMContentLoaded', () => {
+    syncFromDrive();
+});
+
+// ───────────────────────────────────────────────────────
+// UTILIDADES SEGURAS (idénticas al original)
+// ───────────────────────────────────────────────────────
 function turnoTexto(t) {
     if (t === 1 || t === '1') return 'Mat';
     if (t === 2 || t === '2') return 'Vesp';
     return String(t || '');
 }
-// Limpieza segura de strings (nunca rompe con null/undefined)
 function safe(v) { return v == null ? '' : String(v).trim(); }
 
 // ───────────────────────────────────────────────────────
-// PROCESAMIENTO: CRUCE datos1 × datos2
+// PROCESAMIENTO: CRUCE datos1 × datos2 (generado)
 // ───────────────────────────────────────────────────────
 function procesarDatos() {
-    // Filtrar registros inválidos de datos2 (sin docente asignado)
-    const catalogo = rawData2.filter(cat => cat.mat_doc && cat.mat_doc !== 0 && cat.nombre_doc != null);
+    // Filtramos datos2 con docente válido
+    const catalogo = rawData2.filter(cat => {
+        const mat = cat.mat_doc ?? cat['mat_doc'];
+        return mat && mat !== 0 && mat != null && (cat.nombre_doc ?? cat['nombre_doc']) != null;
+    });
 
-    // SIEMPRE evaluar los 3 parciales (obligación completa del docente)
     const PARCIALES = [1, 2, 3];
 
-    // Pre-construir lookup de datos1 por clave compuesta para rendimiento
-    // Clave: idPlantel|matricula|idMateria|semestre|turno|parcial
-    // turno: datos2 turno 1=Mat, 2=Vesp  →  datos1 turno 'Mat' o 'Vesp'
+    // Lookup de datos1 con claves flexibles
     const d1Lookup = {};
     rawData1.forEach(d => {
-        const k = `${d.idPlantel}|${d.matricula}|${d.idMateria}|${d.semestre}|${String(d.turno).trim()}|${d.parcial}`;
-        if (!d1Lookup[k]) d1Lookup[k] = [];
-        d1Lookup[k].push(d);
+        const idPlantel = d.idPlantel ?? d['idPlantel'] ?? '';
+        const matricula = d.matricula ?? d['matricula'] ?? '';
+        const idMateria = d.idMateria ?? d['idMateria'] ?? '';
+        const semestre  = d.semestre ?? d['semestre'] ?? '';
+        const turno     = String(d.turno ?? d['turno'] ?? '').trim();
+        const parcial   = d.parcial ?? d['parcial'] ?? '';
+        const key = `${idPlantel}|${matricula}|${idMateria}|${semestre}|${turno}|${parcial}`;
+        if (!d1Lookup[key]) d1Lookup[key] = [];
+        d1Lookup[key].push(d);
     });
 
     cumplimientoData = [];
 
     catalogo.forEach(cat => {
-        const turnoLabel = turnoTexto(cat.turno);   // 'Mat' o 'Vesp'
+        const turnoLabel = turnoTexto(cat.turno ?? cat['turno']);
+        const no_plantel = cat.no_plantel ?? cat['no_plantel'] ?? '';
+        const plantel_cat = safe(cat.plantel ?? cat['plantel']);
+        const semestre = cat.semestre ?? cat['semestre'] ?? '';
+        const cve_materia = cat.cve_materia ?? cat['cve_materia'] ?? '';
+        const materia_cat = safe(cat.materia ?? cat['materia']);
+        const mat_doc = cat.mat_doc ?? cat['mat_doc'] ?? '';
+        const nombre_doc = safe(cat.nombre_doc ?? cat['nombre_doc']);
+        const genero = safe(cat.Genero ?? cat['genero'] ?? '');
 
         PARCIALES.forEach(parcial => {
-            // Cruce exacto: plantel + mat_doc=matricula + materia + semestre + turno + parcial
-            const key = `${cat.no_plantel}|${cat.mat_doc}|${cat.cve_materia}|${cat.semestre}|${turnoLabel}|${parcial}`;
+            const key = `${no_plantel}|${mat_doc}|${cve_materia}|${semestre}|${turnoLabel}|${parcial}`;
             const entregadas = d1Lookup[key] || [];
 
-            // Deduplicar: sólo contar registros únicos por #Planeacion
-            const planesUnicos = [...new Map(entregadas.map(r => [r['#Planeacion'] || r['#planeacion'], r])).values()];
+            // Deduplicar por #Planeacion
+            const planesUnicos = [...new Map(entregadas.map(r => {
+                const id = r['#Planeacion'] ?? r['#planeacion'] ?? r['#Planeacion'] ?? '';
+                return [String(id), r];
+            })).values()];
 
             const primerRegistro = planesUnicos[0] || null;
 
             cumplimientoData.push({
-                // Del catálogo
-                no_plantel:     cat.no_plantel,
-                plantel_cat:    safe(cat.plantel),
-                semestre:       cat.semestre,
-                turno_num:      cat.turno,
-                turno:          turnoLabel,
-                cve_materia:    cat.cve_materia,
-                materia_cat:    safe(cat.materia),
-                mat_doc:        cat.mat_doc,
-                nombre_doc:     safe(cat.nombre_doc),
-                genero:         safe(cat.Genero || cat.genero),
-                // Parcial evaluado
-                parcial:        parcial,
-                // Resultado del cruce
-                entregadas:     planesUnicos,
-                entrego:        planesUnicos.length > 0,
+                no_plantel,
+                plantel_cat,
+                semestre,
+                turno: turnoLabel,
+                cve_materia,
+                materia_cat,
+                mat_doc,
+                nombre_doc,
+                genero,
+                parcial,
+                entregadas: planesUnicos,
+                entrego: planesUnicos.length > 0,
                 num_entregadas: planesUnicos.length,
-                estatus_plan:   primerRegistro ? safe(primerRegistro.Estatus) : 'Sin Entrega',
-                idPlantel:      cat.no_plantel,
-                plantel:        primerRegistro ? safe(primerRegistro.plantel) : safe(cat.plantel),
+                estatus_plan: primerRegistro ? safe(primerRegistro.Estatus ?? primerRegistro['Estatus']) : 'Sin Entrega',
+                idPlantel: no_plantel,
+                plantel: primerRegistro ? safe(primerRegistro.plantel ?? primerRegistro['plantel']) : plantel_cat,
             });
         });
     });
 
+    // Poblar todos los filtros y tabs
     poblarFiltros();
     applyFilters();
     renderTabDocentes();
@@ -726,7 +666,7 @@ function procesarDatos() {
 }
 
 // ───────────────────────────────────────────────────────
-// POBLAR FILTROS
+// POBLAR FILTROS (idéntico)
 // ───────────────────────────────────────────────────────
 function uniqueSorted(arr) { return [...new Set(arr.map(v => String(v).trim()))].filter(Boolean).sort(); }
 
@@ -737,17 +677,15 @@ function poblarFiltros() {
     setSelectOptions('f-parcial',  uniqueSorted(cumplimientoData.map(d => d.parcial)));
     setSelectOptions('f-estatus',  uniqueSorted(cumplimientoData.map(d => d.estatus_plan)));
     setSelectOptions('f-genero',   uniqueSorted(cumplimientoData.map(d => d.genero)));
-
-    // Filtros de tab docentes
-    setSelectOptions('f2-plantel', uniqueSorted(rawData2.map(d => d.plantel)));
+    setSelectOptions('f2-plantel', uniqueSorted(rawData2.map(d => d.plantel ?? d['plantel'])));
 }
 
 function poblarFiltrosDetalle() {
-    setSelectOptions('fd-plantel', uniqueSorted(rawData1.map(d => d.plantel)));
-    setSelectOptions('fd-turno',   uniqueSorted(rawData1.map(d => d.turno)));
-    setSelectOptions('fd-estatus', uniqueSorted(rawData1.map(d => d.Estatus)));
-    setSelectOptions('fd-parcial', uniqueSorted(rawData1.map(d => d.parcial)));
-    setSelectOptions('fd-semestre',uniqueSorted(rawData1.map(d => d.semestre)));
+    setSelectOptions('fd-plantel', uniqueSorted(rawData1.map(d => d.plantel ?? d['plantel'])));
+    setSelectOptions('fd-turno',   uniqueSorted(rawData1.map(d => d.turno ?? d['turno'])));
+    setSelectOptions('fd-estatus', uniqueSorted(rawData1.map(d => d.Estatus ?? d['Estatus'])));
+    setSelectOptions('fd-parcial', uniqueSorted(rawData1.map(d => d.parcial ?? d['parcial'])));
+    setSelectOptions('fd-semestre',uniqueSorted(rawData1.map(d => d.semestre ?? d['semestre'])));
 }
 
 function poblarFiltrosPendientes() {
@@ -794,7 +732,7 @@ function applyFilters() {
 }
 
 // ───────────────────────────────────────────────────────
-// ACTUALIZAR RESUMEN GENERAL
+// ACTUALIZAR RESUMEN (idéntico)
 // ───────────────────────────────────────────────────────
 function updateResumen(data) {
     const esperadas   = data.length;
@@ -802,7 +740,6 @@ function updateResumen(data) {
     const pendientes  = esperadas - entregadas;
     const pct         = esperadas > 0 ? (entregadas / esperadas * 100) : 0;
 
-    // Docentes con 100% en su propia dimensión filtrada
     const porDocente = {};
     data.forEach(d => {
         const k = d.mat_doc;
@@ -811,10 +748,7 @@ function updateResumen(data) {
         if (d.entrego) porDocente[k].ent++;
     });
     const docOk = Object.values(porDocente).filter(v => v.esp > 0 && v.ent === v.esp).length;
-
-    // Total planeaciones registradas en datos1 filtradas
     const totalPlanes = data.reduce((s, d) => s + d.num_entregadas, 0);
-
     const totalDocentes = Object.keys(porDocente).length;
     const docParcial    = Object.values(porDocente).filter(v => v.ent > 0 && v.ent < v.esp).length;
     const docCero       = Object.values(porDocente).filter(v => v.ent === 0).length;
@@ -835,7 +769,7 @@ function updateResumen(data) {
 }
 
 // ───────────────────────────────────────────────────────
-// GRÁFICAS DEL RESUMEN
+// GRÁFICAS (idénticas al original)
 // ───────────────────────────────────────────────────────
 function renderChartsResumen(data, pct) {
     const cfg = { responsive: true, displayModeBar: false };
@@ -859,7 +793,7 @@ function renderChartsResumen(data, pct) {
         }
     }], { ...layout0, margin:{t:50,b:20,l:30,r:30} }, cfg);
 
-    // PARCIAL – Entregadas vs Esperadas
+    // PARCIAL
     const parMap = {};
     data.forEach(d => {
         const k = 'P' + d.parcial;
@@ -873,7 +807,7 @@ function renderChartsResumen(data, pct) {
         { name:'Entregadas', x:parKeys, y:parKeys.map(k=>parMap[k].ent), type:'bar', marker:{color:'#2563eb'} }
     ], { ...layout0, barmode:'group', showlegend:true, legend:{font:{size:9}}, yaxis:{gridcolor:'#f1f5f9'} }, cfg);
 
-    // SEMESTRE – Entregadas vs Esperadas
+    // SEMESTRE
     const semMap = {};
     data.forEach(d => {
         const k = d.semestre + 'º';
@@ -887,12 +821,12 @@ function renderChartsResumen(data, pct) {
         { name:'Entregadas', x:semKeys, y:semKeys.map(k=>semMap[k].ent), type:'bar', marker:{color:'#7c3aed'} }
     ], { ...layout0, barmode:'group', showlegend:true, legend:{font:{size:9}}, yaxis:{gridcolor:'#f1f5f9'} }, cfg);
 
-    // ESTATUS PIE (de datos1 dentro del filtro)
+    // ESTATUS
     const estMap = {};
     data.forEach(d => {
         if (d.entrego) {
             d.entregadas.forEach(p => {
-                const s = String(p.Estatus).trim();
+                const s = String(p.Estatus ?? p['Estatus']).trim();
                 estMap[s] = (estMap[s] || 0) + 1;
             });
         } else {
@@ -909,7 +843,7 @@ function renderChartsResumen(data, pct) {
         textfont: { size: 9 }
     }], { ...layout0, margin:{t:20,b:20,l:10,r:10}, showlegend:false }, cfg);
 
-    // % CUMPLIMIENTO POR PLANTEL (barras horizontales)
+    // PLANTEL
     const plMap = {};
     data.forEach(d => {
         const k = String(d.plantel).trim();
@@ -938,22 +872,13 @@ function renderChartsResumen(data, pct) {
         hovertemplate: '<b>%{y}</b><br>Cumplimiento: %{x:.1f}%<extra></extra>'
     }], {
         ...layout0,
-        xaxis: {
-            range: [0, 118],
-            gridcolor: '#f1f5f9',
-            ticksuffix: '%',
-            tickfont: { size: 10 },
-            title: { text: '% de Cumplimiento', font: { size: 10, color: '#94a3b8' } }
-        },
-        yaxis: {
-            tickfont: { size: 11, color: '#1e293b' },
-            automargin: true
-        },
+        xaxis: { range: [0, 118], gridcolor: '#f1f5f9', ticksuffix: '%', tickfont: { size: 10 }, title: { text: '% de Cumplimiento', font: { size: 10, color: '#94a3b8' } } },
+        yaxis: { tickfont: { size: 11, color: '#1e293b' }, automargin: true },
         margin: { t: 16, b: 40, l: 10, r: 70 },
         bargap: 0.35
     }, cfg);
 
-    // DISTRIBUCIÓN DOCENTES por nivel
+    // DOCENTES DIST
     const docMap = {};
     data.forEach(d => {
         const k = d.mat_doc;
@@ -980,7 +905,7 @@ function renderChartsResumen(data, pct) {
 }
 
 // ───────────────────────────────────────────────────────
-// TAB PLANTELES
+// TAB PLANTELES (idéntico)
 // ───────────────────────────────────────────────────────
 function renderTabPlanteles(data) {
     const plMap = {};
@@ -1015,7 +940,7 @@ function renderTabPlanteles(data) {
 }
 
 // ───────────────────────────────────────────────────────
-// TAB DOCENTES
+// TAB DOCENTES (idéntico)
 // ───────────────────────────────────────────────────────
 function renderTabDocentes() {
     if (!cumplimientoData.length) return;
@@ -1025,10 +950,8 @@ function renderTabDocentes() {
     const f2Turno   = document.getElementById('f2-turno')?.value   || '';
     const f2Cumpl   = document.getElementById('f2-cumpl')?.value  || '';
 
-    // Agrupar por docente (mat_doc) considerando todos los parciales
     const docMap = {};
     cumplimientoData.forEach(d => {
-        // Si hay filtro de turno, sólo contar registros de ese turno
         if (f2Turno && d.turno !== f2Turno) return;
         const k = d.mat_doc;
         if (!docMap[k]) docMap[k] = {
@@ -1043,7 +966,6 @@ function renderTabDocentes() {
     });
 
     let rows = Object.values(docMap);
-
     if (search)    rows = rows.filter(d => safe(d.nombre).toLowerCase().includes(search));
     if (f2Plantel) rows = rows.filter(d => safe(d.plantel) === f2Plantel);
     if (f2Cumpl === '100')    rows = rows.filter(d => d.esp > 0 && d.ent === d.esp);
@@ -1074,7 +996,7 @@ function renderTabDocentes() {
 }
 
 // ───────────────────────────────────────────────────────
-// TAB DETALLE (datos1)
+// TAB DETALLE (idéntico, adaptado campos flexibles)
 // ───────────────────────────────────────────────────────
 function renderTabDetalle() {
     if (!rawData1.length) return;
@@ -1087,21 +1009,26 @@ function renderTabDetalle() {
     const fDoc     = (document.getElementById('fd-docente')?.value|| '').toLowerCase();
 
     let data = rawData1.filter(d => {
-        if (fPlantel && String(d.plantel).trim() !== fPlantel) return false;
-        if (fTurno   && String(d.turno).trim() !== fTurno)    return false;
-        if (fEstatus && String(d.Estatus).trim() !== fEstatus) return false;
-        if (fParcial && String(d.parcial).trim() !== fParcial) return false;
-        if (fSem     && String(d.semestre).trim() !== fSem)   return false;
-        if (fDoc     && !d.docente.toLowerCase().includes(fDoc)) return false;
+        const plantel = d.plantel ?? d['plantel'] ?? '';
+        const turno = String(d.turno ?? d['turno'] ?? '').trim();
+        const estatus = d.Estatus ?? d['Estatus'] ?? '';
+        const parcial = d.parcial ?? d['parcial'] ?? '';
+        const semestre = d.semestre ?? d['semestre'] ?? '';
+        const docente = d.docente ?? d['docente'] ?? '';
+        if (fPlantel && String(plantel).trim() !== fPlantel) return false;
+        if (fTurno   && turno !== fTurno)    return false;
+        if (fEstatus && String(estatus).trim() !== fEstatus) return false;
+        if (fParcial && String(parcial).trim() !== fParcial) return false;
+        if (fSem     && String(semestre).trim() !== fSem)   return false;
+        if (fDoc     && !docente.toLowerCase().includes(fDoc)) return false;
         return true;
     });
 
-    // Deduplicar por #Planeacion para evitar duplicados
     const seen = new Map();
     data.forEach(d => {
-        const key = d['#Planeacion'] || d['#planeacion'];
+        const key = d['#Planeacion'] ?? d['#planeacion'] ?? '';
         if (key && !seen.has(key)) seen.set(key, d);
-        else if (!key) seen.set(Math.random(), d); // sin clave, conservar
+        else if (!key) seen.set(Math.random(), d);
     });
     data = [...seen.values()];
 
@@ -1112,21 +1039,33 @@ function renderTabDetalle() {
         if (s==='en revisión'||s==='enviadas') return 'badge-amber';
         return 'badge-blue';
     };
-    document.getElementById('tbody-detalle').innerHTML = data.map(d => `<tr>
-        <td class="mono">${d['#Planeacion'] || d['#planeacion'] || ''}</td>
-        <td style="font-size:0.72rem;color:#64748b;font-weight:600">${String(d.plantel).trim()}</td>
-        <td style="font-weight:700">${safe(d.docente)}</td>
-        <td style="font-size:0.72rem">${d.materia}</td>
-        <td><span class="badge ${badgeFn(d.Estatus)}">${d.Estatus}</span></td>
-        <td class="mono">${d.semestre}º ${d.turno}</td>
-        <td style="font-size:0.7rem;color:#64748b">${String(d.grupos||'').trim()}</td>
-        <td><span style="background:#0f172a;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.65rem;font-weight:700;font-family:var(--mono)">P${d.parcial}</span></td>
-        <td class="mono">${d.fec_elaboracion||''}</td>
-    </tr>`).join('');
+    document.getElementById('tbody-detalle').innerHTML = data.map(d => {
+        const idPlan = d['#Planeacion'] ?? d['#planeacion'] ?? '';
+        const plantel = d.plantel ?? d['plantel'] ?? '';
+        const docente = d.docente ?? d['docente'] ?? '';
+        const materia = d.materia ?? d['materia'] ?? '';
+        const estatus = d.Estatus ?? d['Estatus'] ?? '';
+        const semestre = d.semestre ?? d['semestre'] ?? '';
+        const turno = d.turno ?? d['turno'] ?? '';
+        const grupos = d.grupos ?? d['grupos'] ?? '';
+        const parcial = d.parcial ?? d['parcial'] ?? '';
+        const fec = d.fec_elaboracion ?? d['fec_elaboracion'] ?? '';
+        return `<tr>
+            <td class="mono">${idPlan}</td>
+            <td style="font-size:0.72rem;color:#64748b;font-weight:600">${String(plantel).trim()}</td>
+            <td style="font-weight:700">${safe(docente)}</td>
+            <td style="font-size:0.72rem">${materia}</td>
+            <td><span class="badge ${badgeFn(estatus)}">${estatus}</span></td>
+            <td class="mono">${semestre}º ${turno}</td>
+            <td style="font-size:0.7rem;color:#64748b">${String(grupos).trim()}</td>
+            <td><span style="background:#0f172a;color:#fff;padding:2px 8px;border-radius:4px;font-size:0.65rem;font-weight:700;font-family:var(--mono)">P${parcial}</span></td>
+            <td class="mono">${fec}</td>
+        </tr>`;
+    }).join('');
 }
 
 // ───────────────────────────────────────────────────────
-// TAB PENDIENTES
+// TAB PENDIENTES (idéntico)
 // ───────────────────────────────────────────────────────
 function renderTabPendientes() {
     if (!cumplimientoData.length) return;
@@ -1137,7 +1076,6 @@ function renderTabPendientes() {
     const fDoc     = (document.getElementById('fp-docente')?.value|| '').toLowerCase();
 
     let pend = cumplimientoData.filter(d => !d.entrego);
-
     if (fPlantel) pend = pend.filter(d => String(d.plantel).trim() === fPlantel);
     if (fSem)     pend = pend.filter(d => String(d.semestre).trim() === fSem);
     if (fTurno)   pend = pend.filter(d => String(d.turno).trim() === fTurno);
@@ -1157,7 +1095,7 @@ function renderTabPendientes() {
 }
 
 // ───────────────────────────────────────────────────────
-// EXPORTAR CSV
+// EXPORTAR CSV (idéntico)
 // ───────────────────────────────────────────────────────
 function exportCSV() {
     const data = getFilteredCumplimiento();
@@ -1200,10 +1138,7 @@ function clearData() {
     document.getElementById('kpi-doc-ok-mini').innerText = '✓ 0';
     document.getElementById('kpi-doc-parcial-mini').innerText = '~ 0';
     document.getElementById('kpi-doc-cero-mini').innerText = '✗ 0';
-    const emptyDiv = document.getElementById('empty-resumen');
-    emptyDiv.style.display = 'flex';
-    emptyDiv.innerHTML = '<div class="loader"></div><p>Cargando datos desde el repositorio...<br><small><code>datos.json</code></small></p>';
-    cargarDatosDesdeGitHub();
+    document.getElementById('empty-resumen').style.display = '';
 }
 
 // ───────────────────────────────────────────────────────
@@ -1215,11 +1150,6 @@ function switchTab(id, btn) {
     document.getElementById(id).classList.add('active');
     btn.classList.add('active');
 }
-
-// ───────────────────────────────────────────────────────
-// INICIAR CARGA AUTOMÁTICA
-// ───────────────────────────────────────────────────────
-cargarDatosDesdeGitHub();
 </script>
 </body>
 </html>
